@@ -1,4 +1,5 @@
 #include "matrix.hpp"
+#include "plotter.hpp"
 
 #include <iostream>
 #include <vector>
@@ -9,6 +10,7 @@
 // Параметры элементов схемы
 
 using namespace NMatrix;
+using namespace NPlotter;
 
 constexpr long double EPS = 1e-13;
 
@@ -67,40 +69,40 @@ auto FindAbsMax(const TMatrix<>& matrix) {
 };
 
 // Метод Гаусса c выбором главного элемента
-TMatrix<> gauss(
-    const TMatrix<>& coef, 
-    const TMatrix<>& right_part
+TMatrix<> Gauss(
+    const TMatrix<>& coef,
+    const TMatrix<>& rightPart
     ) 
 {
-    if (coef.Rows() != coef.Cols() || coef.Rows() != right_part.Rows() || right_part.Cols() != 1) {
-        std::cerr << "Error in function gauss(): size of coef-matrix must be [n]x[n] and size of "
-                     "right_part-matrix mustbe [n]x[1].\n";
+    if (coef.Rows() != coef.Cols() || coef.Rows() != rightPart.Rows() || rightPart.Cols() != 1) {
+        std::cerr << "Error in function Gauss(): size of coef-matrix must be [n]x[n] and size of "
+                     "rightPart-matrix mustbe [n]x[1].\n";
         std::exit(-1);
     }
     TMatrix<> a = coef;
-    TMatrix<> b = right_part;
+    TMatrix<> b = rightPart;
     TMatrix<> result(b.Rows(), 1);
     std::vector<int> p(a.Rows());  // вектор перестановок столбцов матрицы коэффициентов и
                                   // соответствующихим строк решения
 
     // Прямой ход метода Гаусса
     for (int i = 0; i < a.Cols() - 1; i++) {
-        auto [max, row_max, col_max] = FindAbsMax(GetSubMatrix(a, i, a.Rows(), i,  a.Cols()));
-        row_max += i;
-        col_max += i;
+        auto [max, rowMax, colMax] = FindAbsMax(GetSubMatrix(a, i, a.Rows(), i,  a.Cols()));
+        rowMax += i;
+        colMax += i;
 
-        if (i != row_max) {  // Перестановка строк
-            std::swap(a[i], a[row_max]);
-            std::swap(b[i], b[row_max]);
+        if (i != rowMax) {  // Перестановка строк
+            std::swap(a[i], a[rowMax]);
+            std::swap(b[i], b[rowMax]);
         }
-        if (i != col_max) {  // Перестановка столбцов
+        if (i != colMax) {  // Перестановка столбцов
             for (int k = 0; k < a.Rows(); k++) {
-                std::swap(a[k][i], a[k][col_max]);
-                p[i] = col_max;
+                std::swap(a[k][i], a[k][colMax]);
+                p[i] = colMax;
             }
         }
         if (std::abs(a[i][i]) < EPS) {
-            std::cerr << "Error in fuction gauss(): coef-matrix must not be degenerate.\n";
+            std::cerr << "Error in fuction Gauss(): coef-matrix must not be degenerate.\n";
             std::exit(-2);
         }
         for (int j = i + 1; j < a.Rows(); j++) {
@@ -113,7 +115,7 @@ TMatrix<> gauss(
     }
     // Обратный ход метода Гаусса
     if (std::abs(a[a.Rows() - 1][a.Cols() - 1]) < EPS) {
-        std::cerr << "Error in fuction gauss(): coef-matrix must not be degenerate.\n";
+        std::cerr << "Error in fuction Gauss(): coef-matrix must not be degenerate.\n";
         std::exit(-2);
     }
     for (int i = b.Rows() - 1; i > -1; i--) {
@@ -125,58 +127,26 @@ TMatrix<> gauss(
         result[i][0] = (b[i][0] - sum) / a[i][i];
     }
     for (int i = p.size() - 1; i >= 0; i--) {  // обратная перестановка строк решения
-        if (p[i]) {
+        if (p[i] != 0) {
             std::swap(result[i][0], result[p[i]][0]);
         }
     }
     return result;
 }
 
-// Функция для вывода графиков с помощью gnuplot
-void plot(
-    const std::vector<long double>& t,
-    const std::vector<long double>& p,
-    const std::string& s,
-    int j
-    )
-{
-    FILE* pipe = popen("gnuplot -persist", "w");
-    if (!pipe) {
-        std::cerr << "Gnuplot not found\n";
-        std::exit(6);
-    }
-    fprintf(pipe, "$p << EOD\n");
-    for (int i = 0; i < p.size(); ++i) {
-        fprintf(pipe, "%Lf\t%Lf\n", t[i], p[i]);
-    }
-    fprintf(pipe, "EOD\n");
-    fprintf(pipe, "set xlabel 't, с'\nset ylabel '");
-    fprintf(pipe, s.c_str());
-    fprintf(pipe, "'\n");
-    fprintf(pipe, "set title '");
-    fprintf(pipe, s.c_str());
-    fprintf(pipe, "'\n");
-    fprintf(pipe, "set terminal png size 640, 480 \n");
-    fprintf(pipe, "set output 'φ_%d.png'\n", j);
-
-    fprintf(pipe, "plot '$p' using 1:2 with lines notitle\n");
-    fflush(pipe);  //, 'sonya_all_phi_1_5.tb9' u 1:%d w lines title 'PA9'\n", j + 1);
-    pclose(pipe);
-}
-
 // Функция заполнения матрицы проводимости и вектора токов
 void init(
-    const int timeIteration, 
-    const double t, 
-    const double dt, 
-    TMatrix<>& node_admittance,
-    TMatrix<>& current, 
-    const TMatrix<>& basis, 
+    const int timeIteration,
+    const double t,
+    const double dt,
+    TMatrix<>& nodeAdmittance,
+    TMatrix<>& current,
+    const TMatrix<>& basis,
     const std::vector<double>& uc1,
-    const std::vector<double>& uc2, 
+    const std::vector<double>& uc2,
     const std::vector<double>& ucb,
     const std::vector<double>& il2
-    ) 
+    )
 {
     current[0][0] = basis[0][0] / R2 +
                     C1 * (basis[0][0] - basis[1][0] - uc1[timeIteration - 1]) / dt +
@@ -193,25 +163,33 @@ void init(
                     (basis[0][0] - basis[4][0]) / R21 -
                     (il2[timeIteration - 1] + dt * (basis[3][0] - basis[4][0]) / L2) +
                     C2 * (basis[4][0] - uc2[timeIteration - 1]) / dt;
-    node_admittance[0][0] = 1 / R2 + C1 / dt + 1 / R21 + 1 / Re2;
-    node_admittance[0][1] = -C1 / dt;
-    node_admittance[0][3] = -1 / Re2;
-    node_admittance[0][4] = -1 / R21;
-    node_admittance[1][0] = -C1 / dt;
-    node_admittance[1][1] = C1 / dt + 1 / Rb;
-    node_admittance[1][2] = -1 / Rb;
-    node_admittance[2][1] = -1 / Rb;
-    node_admittance[2][2] = 1 / Rb + Cb / dt + 1 / Ru + dId_dp3(basis[2][0], basis[4][0]);
-    node_admittance[2][4] = -Cb / dt - 1 / Ru + dId_dp5(basis[2][0], basis[4][0]);
-    node_admittance[3][0] = -1 / Re2;
-    node_admittance[3][3] = 1 / Re2 + dt / L2;
-    node_admittance[3][4] = -dt / L2;
-    node_admittance[4][0] = -1 / R21;
-    node_admittance[4][2] = -Cb / dt - 1 / Ru - dId_dp3(basis[2][0], basis[4][0]);
+    nodeAdmittance[0][0] = 1 / R2 + C1 / dt + 1 / R21 + 1 / Re2;
+    nodeAdmittance[0][1] = -C1 / dt;
+    nodeAdmittance[0][3] = -1 / Re2;
+    nodeAdmittance[0][4] = -1 / R21;
+    nodeAdmittance[1][0] = -C1 / dt;
+    nodeAdmittance[1][1] = C1 / dt + 1 / Rb;
+    nodeAdmittance[1][2] = -1 / Rb;
+    nodeAdmittance[2][1] = -1 / Rb;
+    nodeAdmittance[2][2] = 1 / Rb + Cb / dt + 1 / Ru + dId_dp3(basis[2][0], basis[4][0]);
+    nodeAdmittance[2][4] = -Cb / dt - 1 / Ru + dId_dp5(basis[2][0], basis[4][0]);
+    nodeAdmittance[3][0] = -1 / Re2;
+    nodeAdmittance[3][3] = 1 / Re2 + dt / L2;
+    nodeAdmittance[3][4] = -dt / L2;
+    nodeAdmittance[4][0] = -1 / R21;
+    nodeAdmittance[4][2] = -Cb / dt - 1 / Ru - dId_dp3(basis[2][0], basis[4][0]);
 
-    node_admittance[4][3] = -dt / L2;
-    node_admittance[4][4] =
+    nodeAdmittance[4][3] = -dt / L2;
+    nodeAdmittance[4][4] =
         Cb / dt + 1 / Ru - dId_dp5(basis[2][0], basis[4][0]) + C2 / dt + dt / L2 + 1 / R21;
+}
+
+template<typename T>
+std::ostream& operator<<(std::ostream& out, const std::vector<T>& other) {
+    for (const auto& item : other) {
+        out << item << " ";
+    }
+    return out;
 }
 
 int main() {
@@ -226,12 +204,12 @@ int main() {
     long double dt_prev1 = dt;
     long double dt_prev2 = dt;                                          // предыдущие шаги интегрирования по времени
     TMatrix<> basis(5, 1);                                  // вектор базиса метода (узловые потенциалы)
-    TMatrix<> basis_prev1(basis.Rows(), 1);
-    TMatrix<> basis_prev2(basis.Rows(), 1);
-    TMatrix<> basis_prev3(basis.Rows(), 1);                     // предыдущие значения базиса
-    TMatrix<> node_admittance(basis.Rows(), basis.Rows());      // матрица узловых проводимостей
+
+    std::vector<TMatrix<>> previousBasis(3, TMatrix<>(basis.Rows(), 1)); // предыдущие значения базиса
+
+    TMatrix<> nodeAdmittance(basis.Rows(), basis.Rows());      // матрица узловых проводимостей
     TMatrix<> current(basis.Rows(), 1);                     // вектор невязок
-    std::vector<long double> time = {t};
+    std::vector<long double> time/* = {t}*/;
     // Переменные состояния
     std::vector<double> uc1 = {0};
     std::vector<double> uc2 = {0};
@@ -243,11 +221,10 @@ int main() {
     while (dt >= DT_MIN && t <= MAX_TIME) {
         TMatrix<> delta(basis.Rows(), 1, eps_max + 1);  // вектор поправок
         int n = 0;
-        basis = ((basis_prev1 - basis_prev2) * (dt_prev1 + dt) / dt) +
-                basis_prev2;  // начальные приближения
+        basis = ((previousBasis[0] - previousBasis[1]) * (dt_prev1 + dt) / dt) + previousBasis[1]; // начальные приближения
         while (std::abs(FindAbsMax(delta).value) > eps && n < MAX_STEPS) {  // метод Ньютона
-            init(timeIteration, t, dt, node_admittance, current, basis, uc1, uc2, ucb, il2);
-            delta = gauss(node_admittance, -current);
+            init(timeIteration, t, dt, nodeAdmittance, current, basis, uc1, uc2, ucb, il2);
+            delta = Gauss(nodeAdmittance, -current);
             basis = basis + delta;
             n++;
             currentIteration++;
@@ -257,10 +234,7 @@ int main() {
             continue;
         }
         if (timeIteration > 2) {  // оценка локальной точности
-            long double d = 0.5 * dt * dt *
-                       std::abs(FindAbsMax(((basis_prev1 - basis_prev2) * (1 / (dt_prev1 * dt_prev1)) -
-                                 (basis_prev2 - basis_prev3) * (1 / (dt_prev1 * dt_prev2))))
-                                    .value);
+            long double d = 0.5 * dt * dt * std::abs(FindAbsMax(((previousBasis[0] - previousBasis[1]) * (1 / (dt_prev1 * dt_prev1)) - (previousBasis[1] - previousBasis[2]) * (1 / (dt_prev1 * dt_prev2)))).value);
             if (d < eps_min) {
                 t += dt;
                 dt_prev2 = dt_prev1;
@@ -279,9 +253,9 @@ int main() {
             dt_prev2 = dt_prev1;
             dt_prev1 = dt;
         }
-        basis_prev3 = basis_prev2;
-        basis_prev2 = basis_prev1;
-        basis_prev1 = basis;
+        previousBasis[2] = previousBasis[1];
+        previousBasis[1] = previousBasis[0];
+        previousBasis[0] = basis;
         time.push_back(t);
         for (int i = 0; i < 5; ++i) {
             phi[i].push_back(basis[i][0]);
@@ -298,7 +272,10 @@ int main() {
     std::cout << "Итераций по времени: " << timeIteration << std::endl;
     std::cout << "Всего итераций: " << currentIteration << std::endl;
     for (int i = 0; i < 5; ++i) {
-        plot(time, phi[i], "φ_" + std::to_string(i + 1), i + 1);
+        std::string title = "phi_" + std::to_string(i + 1);
+        TPlotter graphic(title);
+        graphic.SetXValues(time);
+        graphic.AddGraphic("\\phi_" + std::to_string(i + 1), phi[i]);
     }
     return 0;
 }
