@@ -6,8 +6,8 @@ using namespace NMatrix;
 
 TEST(MatrixConstructorTest, DefaultConstructor) {
     NMatrix::TMatrix<> mat;
-    EXPECT_EQ(mat.rows(), 0.0);
-    EXPECT_EQ(mat.cols(), 0.0);
+    EXPECT_EQ(mat.Rows(), 0.0);
+    EXPECT_EQ(mat.Cols(), 0.0);
 }
 
 TEST(MatrixConstructorTest, ParameterizedConstructor) {
@@ -19,8 +19,8 @@ TEST(MatrixConstructorTest, ParameterizedConstructor) {
 
 TEST(MatrixConstructorTest, ParameterizedConstructorWithDefaultValue) {
     TMatrix<> mat(3, 3, 1.0);
-    EXPECT_EQ(mat.rows(), 3);
-    EXPECT_EQ(mat.cols(), 3);
+    EXPECT_EQ(mat.Rows(), 3);
+    EXPECT_EQ(mat.Cols(), 3);
 
     TMatrix<> expected{{1, 1, 1}, {1, 1, 1}, {1, 1, 1}};
     EXPECT_EQ(mat, expected);
@@ -38,12 +38,12 @@ TEST(MatrixAccessTest, OutOfBoundsAccessCols) {
 
 TEST(MatrixAccessTest, Rows) {
     TMatrix<> mat(1, 1);
-    EXPECT_EQ(mat.rows(), 1);
+    EXPECT_EQ(mat.Rows(), 1);
 }
 
 TEST(MatrixAccessTest, Cols) {
     TMatrix<> mat(1, 1);
-    EXPECT_EQ(mat.cols(), 1);
+    EXPECT_EQ(mat.Cols(), 1);
 }
 
 TEST(MatrixOperationsTest, AdditionCorrect) {
