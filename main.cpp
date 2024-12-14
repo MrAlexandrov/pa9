@@ -2,6 +2,7 @@
 #include "plotter.hpp"
 
 #include <iostream>
+#include <stdexcept>
 #include <vector>
 #include <algorithm>
 #include <cstdio>
@@ -48,7 +49,7 @@ template<typename T>
 struct TMaximum {
     T value;
     int row;
-    int col;        
+    int col;
 };
 
 auto FindAbsMax(const TMatrix<>& matrix) {
@@ -75,9 +76,7 @@ TMatrix<> Gauss(
     ) 
 {
     if (coef.Rows() != coef.Cols() || coef.Rows() != rightPart.Rows() || rightPart.Cols() != 1) {
-        std::cerr << "Error in function Gauss(): size of coef-matrix must be [n]x[n] and size of "
-                     "rightPart-matrix mustbe [n]x[1].\n";
-        std::exit(-1);
+        throw std::runtime_error("Error in function Gauss(): size of coef-matrix must be [n]x[n] and size of rightPart-matrix mustbe [n]x[1].");
     }
     TMatrix<> a = coef;
     TMatrix<> b = rightPart;
@@ -87,7 +86,8 @@ TMatrix<> Gauss(
 
     // Прямой ход метода Гаусса
     for (int i = 0; i < a.Cols() - 1; i++) {
-        auto [max, rowMax, colMax] = FindAbsMax(GetSubMatrix(a, i, a.Rows(), i,  a.Cols()));
+        auto [max, rowMax, colMax] = 
+            FindAbsMax(GetSubMatrix(a, i, a.Rows(), i,  a.Cols()));
         rowMax += i;
         colMax += i;
 
@@ -102,8 +102,7 @@ TMatrix<> Gauss(
             }
         }
         if (std::abs(a[i][i]) < EPS) {
-            std::cerr << "Error in fuction Gauss(): coef-matrix must not be degenerate.\n";
-            std::exit(-2);
+            throw std::runtime_error("Error in fuction Gauss(): coef-matrix must not be degenerate.");
         }
         for (int j = i + 1; j < a.Rows(); j++) {
             long double m = a[j][i] / a[i][i];
@@ -115,18 +114,17 @@ TMatrix<> Gauss(
     }
     // Обратный ход метода Гаусса
     if (std::abs(a[a.Rows() - 1][a.Cols() - 1]) < EPS) {
-        std::cerr << "Error in fuction Gauss(): coef-matrix must not be degenerate.\n";
-        std::exit(-2);
+        throw std::runtime_error("Error in fuction Gauss(): coef-matrix must not be degenerate.");
     }
-    for (int i = b.Rows() - 1; i > -1; i--) {
+    for (int i = b.Rows() - 1; i >= 0; --i) {
         long double sum = 0.0;
-        for (int j = i + 1; j < a.Rows(); j++) {
+        for (int j = i + 1; j < a.Rows(); ++j) {
             sum += a[i][j] * result[j][0];
         }
 
         result[i][0] = (b[i][0] - sum) / a[i][i];
     }
-    for (int i = p.size() - 1; i >= 0; i--) {  // обратная перестановка строк решения
+    for (int i = p.size() - 1; i >= 0; --i) {  // обратная перестановка строк решения
         if (p[i] != 0) {
             std::swap(result[i][0], result[p[i]][0]);
         }
@@ -135,12 +133,12 @@ TMatrix<> Gauss(
 }
 
 // Функция заполнения матрицы проводимости и вектора токов
-void init(
+void Initialize(
     const int timeIteration,
     const double t,
     const double dt,
     TMatrix<>& nodeAdmittance,
-    TMatrix<>& current,
+    TMatrix<>& residualVector,
     const TMatrix<>& basis,
     const std::vector<double>& uc1,
     const std::vector<double>& uc2,
@@ -148,17 +146,17 @@ void init(
     const std::vector<double>& il2
     )
 {
-    current[0][0] = basis[0][0] / R2 +
+    residualVector[0][0] = basis[0][0] / R2 +
                     C1 * (basis[0][0] - basis[1][0] - uc1[timeIteration - 1]) / dt +
                     (basis[0][0] - basis[4][0]) / R21 + I2(t) - (basis[3][0] - basis[0][0]) / Re2;
-    current[1][0] = -C1 * (basis[0][0] - basis[1][0] - uc1[timeIteration - 1]) / dt +
+    residualVector[1][0] = -C1 * (basis[0][0] - basis[1][0] - uc1[timeIteration - 1]) / dt +
                     (basis[1][0] - basis[2][0]) / Rb;
-    current[2][0] = -(basis[1][0] - basis[2][0]) / Rb +
+    residualVector[2][0] = -(basis[1][0] - basis[2][0]) / Rb +
                     Cb * (basis[2][0] - basis[4][0] - ucb[timeIteration - 1]) / dt +
                     (basis[2][0] - basis[4][0]) / Ru + Id(basis[2][0], basis[4][0]);
-    current[3][0] = -I2(t) + (basis[3][0] - basis[0][0]) / Re2 +
+    residualVector[3][0] = -I2(t) + (basis[3][0] - basis[0][0]) / Re2 +
                     (il2[timeIteration - 1] + dt * (basis[3][0] - basis[4][0]) / L2);
-    current[4][0] = -Cb * (basis[2][0] - basis[4][0] - ucb[timeIteration - 1]) / dt -
+    residualVector[4][0] = -Cb * (basis[2][0] - basis[4][0] - ucb[timeIteration - 1]) / dt -
                     (basis[2][0] - basis[4][0]) / Ru - Id(basis[2][0], basis[4][0]) -
                     (basis[0][0] - basis[4][0]) / R21 -
                     (il2[timeIteration - 1] + dt * (basis[3][0] - basis[4][0]) / L2) +
@@ -208,8 +206,8 @@ int main() {
     std::vector<TMatrix<>> previousBasis(3, TMatrix<>(basis.Rows(), 1)); // предыдущие значения базиса
 
     TMatrix<> nodeAdmittance(basis.Rows(), basis.Rows());      // матрица узловых проводимостей
-    TMatrix<> current(basis.Rows(), 1);                     // вектор невязок
-    std::vector<long double> time/* = {t}*/;
+    TMatrix<> residualVector(basis.Rows(), 1);                     // вектор невязок
+    std::vector<long double> time;
     // Переменные состояния
     std::vector<double> uc1 = {0};
     std::vector<double> uc2 = {0};
@@ -223,9 +221,9 @@ int main() {
         int n = 0;
         basis = ((previousBasis[0] - previousBasis[1]) * (dt_prev1 + dt) / dt) + previousBasis[1]; // начальные приближения
         while (std::abs(FindAbsMax(delta).value) > eps && n < MAX_STEPS) {  // метод Ньютона
-            init(timeIteration, t, dt, nodeAdmittance, current, basis, uc1, uc2, ucb, il2);
-            delta = Gauss(nodeAdmittance, -current);
-            basis = basis + delta;
+            Initialize(timeIteration, t, dt, nodeAdmittance, residualVector, basis, uc1, uc2, ucb, il2);
+            delta = Gauss(nodeAdmittance, -residualVector);
+            basis += delta;
             n++;
             currentIteration++;
         }
@@ -275,7 +273,7 @@ int main() {
         std::string title = "phi_" + std::to_string(i + 1);
         TPlotter graphic(title);
         graphic.SetXValues(time);
-        graphic.AddGraphic("\\phi_" + std::to_string(i + 1), phi[i]);
+        graphic.AddGraphic(title, phi[i]);
     }
     return 0;
 }
