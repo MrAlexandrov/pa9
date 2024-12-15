@@ -21,8 +21,18 @@ public:
         , Data_(data)
         {}
 
+    TGraph(const std::string& title, const std::string& color, const std::vector<long double>& data)
+        : Title_(title)
+        , Color_(color)
+        , Data_(data)
+        {}
+
     void SetTitle(std::string&& title) {
         Title_ = std::move(title);
+    }
+
+    void SetColor(const std::string& color) {
+        Color_ = color;
     }
 
     void SetData(const std::vector<long double>& data) {
@@ -31,6 +41,10 @@ public:
 
     std::string GetTitle() const {
         return Title_;
+    }
+
+    std::optional<std::string> GetColor() const {
+        return Color_;
     }
 
     std::vector<long double> GetData() const {
@@ -44,6 +58,7 @@ public:
 
 private:
     std::string Title_;
+    std::optional<std::string> Color_;
     std::vector<long double> Data_;
 };
 
@@ -75,6 +90,14 @@ public:
             DataSize_ = data.size();
         }
         Datas_.emplace_back(name, data);
+    }
+
+    void AddGraphic(const std::string& name, const std::string& color, const std::vector<long double>& data) {
+        assert(!DataSize_.has_value() || DataSize_ == data.size());
+        if (!DataSize_.has_value()) {
+            DataSize_ = data.size();
+        }
+        Datas_.emplace_back(name, color, data);
     }
 
     ~TPlotter() {
@@ -119,7 +142,12 @@ private:
 
         int index = 2;
         for (const auto& data : Datas_) {
-            commands << "'" << DataFile_ << "' using 1:" << index++ << " with lines title '" << data.GetTitle() << "', ";
+            commands << "'" << DataFile_ << "' using 1:" << index++ << " with lines ";
+            auto color = data.GetColor();
+            if (color.has_value()) {
+                commands << "linecolor rgb \"" << color.value() << "\" ";
+            }
+            commands << "title '" << data.GetTitle() << "', ";
         }
         std::string result = commands.str();
         result.pop_back();

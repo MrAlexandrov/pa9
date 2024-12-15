@@ -11,7 +11,6 @@
 // Параметры элементов схемы
 
 using namespace NMatrix;
-using namespace NPlotter;
 
 constexpr long double EPS = 1e-13;
 
@@ -27,7 +26,6 @@ constexpr long double MFt = 0.026;
 constexpr long double It = 1e-12;
 constexpr long double Re2 = 1e-6;
 constexpr long double T = 1e-4;
-constexpr long double A = 1e+9;
 
 long double I2(long double t) {
     return (10 / Re2) * std::sin(2 * M_PI * t / T);
@@ -73,7 +71,7 @@ auto FindAbsMax(const TMatrix<>& matrix) {
 TMatrix<> Gauss(
     const TMatrix<>& coef,
     const TMatrix<>& rightPart
-    ) 
+    )
 {
     if (coef.Rows() != coef.Cols() || coef.Rows() != rightPart.Rows() || rightPart.Cols() != 1) {
         throw std::runtime_error("Error in function Gauss(): size of coef-matrix must be [n]x[n] and size of rightPart-matrix mustbe [n]x[1].");
@@ -101,7 +99,7 @@ TMatrix<> Gauss(
                 p[i] = colMax;
             }
         }
-        if (std::abs(a[i][i]) < EPS) {
+        if (std::fabs(a[i][i]) < EPS) {
             throw std::runtime_error("Error in fuction Gauss(): coef-matrix must not be degenerate.");
         }
         for (int j = i + 1; j < a.Rows(); j++) {
@@ -113,7 +111,7 @@ TMatrix<> Gauss(
         }
     }
     // Обратный ход метода Гаусса
-    if (std::abs(a[a.Rows() - 1][a.Cols() - 1]) < EPS) {
+    if (std::fabs(a[a.Rows() - 1][a.Cols() - 1]) < EPS) {
         throw std::runtime_error("Error in fuction Gauss(): coef-matrix must not be degenerate.");
     }
     for (int i = b.Rows() - 1; i >= 0; --i) {
@@ -137,8 +135,8 @@ void Initialize(
     const int timeIteration,
     const double t,
     const double dt,
-    TMatrix<>& nodeAdmittance,
-    TMatrix<>& residualVector,
+    TMatrix<>& nodeAdmittance,                              // матрица узловых проводимостей
+    TMatrix<>& residualVector,                              // вектор невязок
     const TMatrix<>& basis,
     const std::vector<double>& uc1,
     const std::vector<double>& uc2,
@@ -146,40 +144,76 @@ void Initialize(
     const std::vector<double>& il2
     )
 {
-    residualVector[0][0] = basis[0][0] / R2 +
-                    C1 * (basis[0][0] - basis[1][0] - uc1[timeIteration - 1]) / dt +
-                    (basis[0][0] - basis[4][0]) / R21 + I2(t) - (basis[3][0] - basis[0][0]) / Re2;
-    residualVector[1][0] = -C1 * (basis[0][0] - basis[1][0] - uc1[timeIteration - 1]) / dt +
-                    (basis[1][0] - basis[2][0]) / Rb;
-    residualVector[2][0] = -(basis[1][0] - basis[2][0]) / Rb +
-                    Cb * (basis[2][0] - basis[4][0] - ucb[timeIteration - 1]) / dt +
-                    (basis[2][0] - basis[4][0]) / Ru + Id(basis[2][0], basis[4][0]);
-    residualVector[3][0] = -I2(t) + (basis[3][0] - basis[0][0]) / Re2 +
-                    (il2[timeIteration - 1] + dt * (basis[3][0] - basis[4][0]) / L2);
-    residualVector[4][0] = -Cb * (basis[2][0] - basis[4][0] - ucb[timeIteration - 1]) / dt -
-                    (basis[2][0] - basis[4][0]) / Ru - Id(basis[2][0], basis[4][0]) -
-                    (basis[0][0] - basis[4][0]) / R21 -
-                    (il2[timeIteration - 1] + dt * (basis[3][0] - basis[4][0]) / L2) +
-                    C2 * (basis[4][0] - uc2[timeIteration - 1]) / dt;
-    nodeAdmittance[0][0] = 1 / R2 + C1 / dt + 1 / R21 + 1 / Re2;
-    nodeAdmittance[0][1] = -C1 / dt;
-    nodeAdmittance[0][3] = -1 / Re2;
-    nodeAdmittance[0][4] = -1 / R21;
-    nodeAdmittance[1][0] = -C1 / dt;
-    nodeAdmittance[1][1] = C1 / dt + 1 / Rb;
-    nodeAdmittance[1][2] = -1 / Rb;
-    nodeAdmittance[2][1] = -1 / Rb;
-    nodeAdmittance[2][2] = 1 / Rb + Cb / dt + 1 / Ru + dId_dp3(basis[2][0], basis[4][0]);
-    nodeAdmittance[2][4] = -Cb / dt - 1 / Ru + dId_dp5(basis[2][0], basis[4][0]);
-    nodeAdmittance[3][0] = -1 / Re2;
-    nodeAdmittance[3][3] = 1 / Re2 + dt / L2;
-    nodeAdmittance[3][4] = -dt / L2;
-    nodeAdmittance[4][0] = -1 / R21;
-    nodeAdmittance[4][2] = -Cb / dt - 1 / Ru - dId_dp3(basis[2][0], basis[4][0]);
+    residualVector = {
+        {
+            basis[0][0] / R2 
+            + C1 * (basis[0][0] - basis[1][0] - uc1.back()) / dt 
+            + (basis[0][0] - basis[4][0]) / R21 
+            + I2(t) 
+            - (basis[3][0] - basis[0][0]) / Re2
+        },
+        {
+            -C1 * (basis[0][0] - basis[1][0] - uc1.back()) / dt 
+            + (basis[1][0] - basis[2][0]) / Rb
+        },
+        {
+            -(basis[1][0] - basis[2][0]) / Rb 
+            + Cb * (basis[2][0] - basis[4][0] - ucb.back()) / dt 
+            + (basis[2][0] - basis[4][0]) / Ru 
+            + Id(basis[2][0], basis[4][0])
+        },
+        {
+            -I2(t) 
+            + (basis[3][0] - basis[0][0]) / Re2 
+            + (il2.back() + dt * (basis[3][0] - basis[4][0]) / L2)
+        },
+        {
+            -Cb * (basis[2][0] - basis[4][0] - ucb.back()) / dt 
+            - (basis[2][0] - basis[4][0]) / Ru 
+            - Id(basis[2][0], basis[4][0]) 
+            - (basis[0][0] - basis[4][0]) / R21 
+            - (il2.back() + dt * (basis[3][0] - basis[4][0]) / L2) 
+            + C2 * (basis[4][0] - uc2.back()) / dt
+        }
+    };
 
-    nodeAdmittance[4][3] = -dt / L2;
-    nodeAdmittance[4][4] =
-        Cb / dt + 1 / Ru - dId_dp5(basis[2][0], basis[4][0]) + C2 / dt + dt / L2 + 1 / R21;
+    nodeAdmittance = {
+        {
+            1 / R2 + C1 / dt + 1 / R21 + 1 / Re2,
+            -C1 / dt,
+            0,
+            -1 / Re2,
+            -1 / R21
+        },
+        {
+            -C1 / dt,
+            C1 / dt + 1 / Rb,
+            -1 / Rb,
+            0,
+            0
+        },
+        {
+            0,
+            -1 / Rb,
+            1 / Rb + Cb / dt + 1 / Ru + dId_dp3(basis[2][0], basis[4][0]),
+            0,
+            -Cb / dt - 1 / Ru + dId_dp5(basis[2][0], basis[4][0])
+        },
+        {
+            -1 / Re2,
+            0,
+            0,
+            1 / Re2 + dt / L2,
+            -dt / L2
+        },
+        {
+            -1 / R21,
+            0,
+            -Cb / dt - 1 / Ru - dId_dp3(basis[2][0], basis[4][0]),
+            -dt / L2,
+            Cb / dt + 1 / Ru - dId_dp5(basis[2][0], basis[4][0]) + C2 / dt + dt / L2 + 1 / R21
+        }
+    };
 }
 
 template<typename T>
@@ -190,10 +224,47 @@ std::ostream& operator<<(std::ostream& out, const std::vector<T>& other) {
     return out;
 }
 
+bool PerformNewtonIteration(
+    int timeIteration,
+    long double t,
+    long double dt,
+    NMatrix::TMatrix<>& basis,
+    const std::vector<double>& uc1,
+    const std::vector<double>& uc2,
+    const std::vector<double>& ucb,
+    const std::vector<double>& il2,
+    int& currentIteration
+) {
+    constexpr int MAX_STEPS = 10;   // максимальное число итераций Ньютона
+    constexpr long double eps = 1e-9;
+
+    NMatrix::TMatrix<> nodeAdmittance(basis.Rows(), basis.Rows());
+    NMatrix::TMatrix<> residualVector(basis.Rows(), 1);
+
+    // Начнём с "большой" поправки, чтобы зайти в цикл
+    NMatrix::TMatrix<> delta(basis.Rows(), 1, 1e-6); 
+
+    int n = 0; // счётчик итераций Ньютона
+
+    // Выполняем итерационный процесс
+    while (std::fabs(FindAbsMax(delta).value) > eps && n < MAX_STEPS) {
+        Initialize(timeIteration, (double)t, (double)dt, nodeAdmittance, residualVector, basis, uc1, uc2, ucb, il2);
+        delta = Gauss(nodeAdmittance, -residualVector);
+        basis += delta;
+        ++n;
+        ++currentIteration;
+    }
+
+    // Проверяем результат
+    if (n > MAX_STEPS) {
+        // Не удалось достичь нужной точности за отведённое число итераций
+        return false;
+    }
+    return true;
+}
+
 int main() {
-    constexpr int MAX_STEPS = 10;                                       // максимальное число итераций метода Ньютона
     constexpr long double DT_MIN = 1e-12;                               // минимальный шаг интегрирования по времени
-    constexpr long double eps = 1e-9;                                   // максимальное значение поправок
     constexpr long double eps_min = 1e-3;                               // нижняя граница для оценки локальной точности
     constexpr long double eps_max = 5e-2;                               // верхняя граница для оценки локальной точности
     constexpr long double MAX_TIME = 1e-3;                              // время расчёта
@@ -204,9 +275,7 @@ int main() {
     TMatrix<> basis(5, 1);                                  // вектор базиса метода (узловые потенциалы)
 
     std::vector<TMatrix<>> previousBasis(3, TMatrix<>(basis.Rows(), 1)); // предыдущие значения базиса
-
-    TMatrix<> nodeAdmittance(basis.Rows(), basis.Rows());      // матрица узловых проводимостей
-    TMatrix<> residualVector(basis.Rows(), 1);                     // вектор невязок
+    
     std::vector<long double> time;
     // Переменные состояния
     std::vector<double> uc1 = {0};
@@ -217,22 +286,18 @@ int main() {
     int timeIteration = 1;
     int currentIteration = 1;
     while (dt >= DT_MIN && t <= MAX_TIME) {
-        TMatrix<> delta(basis.Rows(), 1, eps_max + 1);  // вектор поправок
         int n = 0;
         basis = ((previousBasis[0] - previousBasis[1]) * (dt_prev1 + dt) / dt) + previousBasis[1]; // начальные приближения
-        while (std::abs(FindAbsMax(delta).value) > eps && n < MAX_STEPS) {  // метод Ньютона
-            Initialize(timeIteration, t, dt, nodeAdmittance, residualVector, basis, uc1, uc2, ucb, il2);
-            delta = Gauss(nodeAdmittance, -residualVector);
-            basis += delta;
-            n++;
-            currentIteration++;
-        }
-        if (n > MAX_STEPS) {
+
+        bool success = PerformNewtonIteration(timeIteration, t, dt, basis, uc1, uc2, ucb, il2, currentIteration);
+        
+        if (!success) {
             dt /= 2;
             continue;
         }
+
         if (timeIteration > 2) {  // оценка локальной точности
-            long double d = 0.5 * dt * dt * std::abs(FindAbsMax(((previousBasis[0] - previousBasis[1]) * (1 / (dt_prev1 * dt_prev1)) - (previousBasis[1] - previousBasis[2]) * (1 / (dt_prev1 * dt_prev2)))).value);
+            long double d = 0.5 * dt * dt * std::fabs(FindAbsMax(((previousBasis[0] - previousBasis[1]) * (1 / (dt_prev1 * dt_prev1)) - (previousBasis[1] - previousBasis[2]) * (1 / (dt_prev1 * dt_prev2)))).value);
             if (d < eps_min) {
                 t += dt;
                 dt_prev2 = dt_prev1;
@@ -269,11 +334,13 @@ int main() {
     }
     std::cout << "Итераций по времени: " << timeIteration << std::endl;
     std::cout << "Всего итераций: " << currentIteration << std::endl;
+    
+    std::vector<std::string> colors = {"red", "yellow", "green", "blue", "violet"};
     for (int i = 0; i < 5; ++i) {
         std::string title = "phi_" + std::to_string(i + 1);
-        TPlotter graphic(title);
+        NPlotter::TPlotter graphic(title);
         graphic.SetXValues(time);
-        graphic.AddGraphic(title, phi[i]);
+        graphic.AddGraphic(title, colors[i], phi[i]);
     }
     return 0;
 }
