@@ -15,7 +15,7 @@ using namespace NMatrix;
 constexpr long double EPS = 1e-13;
 
 constexpr long double R2 = 1000.0;
-constexpr long double R21 = 1e+5;
+// constexpr long double R21 = 1e+5;
 constexpr long double C1 = 1e-6;
 constexpr long double C2 = 1e-6;
 constexpr long double L2 = 1e-3;
@@ -26,6 +26,7 @@ constexpr long double MFt = 0.026;
 constexpr long double It = 1e-12;
 constexpr long double Re1 = 1e-6;
 constexpr long double T = 1e-4;
+constexpr long double C_NEW = 1e-6;
 
 long double I2(long double currentTime) {
     return (1e1 / Re1) * std::sin(2 * M_PI * currentTime / T);
@@ -141,14 +142,15 @@ void Initialize(
     const std::vector<long double>& uc1,
     const std::vector<long double>& uc2,
     const std::vector<long double>& ucb,
-    const std::vector<long double>& il2
+    const std::vector<long double>& il2,
+    const std::vector<long double>& u_new
     )
 {
     residualVector = {
         {
             basis[0][0] / R2
             + C1 * (basis[0][0] - basis[1][0] - uc1.back()) / dt
-            + (basis[0][0] - basis[4][0]) / R21
+            + C_NEW * (basis[0][0] - basis[4][0] - u_new.back()) / dt
             + I2(currentTime)
             - (basis[3][0] - basis[0][0]) / Re1
         },
@@ -171,7 +173,7 @@ void Initialize(
             -Cb * (basis[2][0] - basis[4][0] - ucb.back()) / dt
             - (basis[2][0] - basis[4][0]) / Ru
             - Id(basis[2][0], basis[4][0])
-            - (basis[0][0] - basis[4][0]) / R21
+            - C_NEW * (basis[0][0] - basis[4][0] - u_new.back()) / dt
             - (il2.back() + dt * (basis[3][0] - basis[4][0]) / L2)
             + C2 * (basis[4][0] - uc2.back()) / dt
         }
@@ -179,11 +181,11 @@ void Initialize(
 
     nodeAdmittance = {
         {
-            1 / R2 + C1 / dt + 1 / R21 + 1 / Re1,
+            1 / R2 + C1 / dt + (C_NEW / dt) + 1 / Re1,
             -C1 / dt,
             0,
             -1 / Re1,
-            -1 / R21
+            -(C_NEW / dt)
         },
         {
             -C1 / dt,
@@ -207,11 +209,11 @@ void Initialize(
             -dt / L2
         },
         {
-            -1 / R21,
+            -(C_NEW / dt),
             0,
             -Cb / dt - 1 / Ru - dId_dp3(basis[2][0], basis[4][0]),
             -dt / L2,
-            Cb / dt + 1 / Ru - dId_dp5(basis[2][0], basis[4][0]) + C2 / dt + dt / L2 + 1 / R21
+            Cb / dt + 1 / Ru - dId_dp5(basis[2][0], basis[4][0]) + C2 / dt + dt / L2 + (C_NEW / dt)
         }
     };
 }
@@ -233,6 +235,7 @@ bool PerformNewtonIteration(
     const std::vector<long double>& uc2,
     const std::vector<long double>& ucb,
     const std::vector<long double>& il2,
+    const std::vector<long double>& u_new,
     int& currentIteration
 ) {
     constexpr int MAX_STEPS = 10;   // максимальное число итераций Ньютона
@@ -248,7 +251,7 @@ bool PerformNewtonIteration(
 
     // Выполняем итерационный процесс
     while (std::fabs(FindAbsMax(delta).value) > eps && n < MAX_STEPS) {
-        Initialize(timeIteration, currentTime, dt, nodeAdmittance, residualVector, basis, uc1, uc2, ucb, il2);
+        Initialize(timeIteration, currentTime, dt, nodeAdmittance, residualVector, basis, uc1, uc2, ucb, il2, u_new);
         delta = Gauss(nodeAdmittance, -residualVector);
         basis += delta;
         ++n;
@@ -282,13 +285,14 @@ int main() {
     std::vector<long double> uc2 = {0};
     std::vector<long double> ucb = {0};
     std::vector<long double> il2 = {0};
+    std::vector<long double> u_new = {0};
     std::vector<std::vector<long double>> phi(5);
     int timeIteration = 1;
     int currentIteration = 1;
     while (dt >= DT_MIN && currentTime <= TIME_MAX) {
         int n = 0;
         basis = ((previousBasis[0] - previousBasis[1]) * (dt_prev1 + dt) / dt) + previousBasis[1]; // начальные приближения
-        bool success = PerformNewtonIteration(timeIteration, currentTime, dt, basis, uc1, uc2, ucb, il2, currentIteration);
+        bool success = PerformNewtonIteration(timeIteration, currentTime, dt, basis, uc1, uc2, ucb, il2, u_new, currentIteration);
 
         if (!success) {
             dt /= 2;
@@ -326,6 +330,7 @@ int main() {
         uc2.push_back(basis[4][0]);
         ucb.push_back(basis[2][0] - basis[4][0]);
         il2.push_back(il2.back() + dt * (basis[3][0] - basis[4][0]) / L2);
+        u_new.push_back(basis[0][0] - basis[4][0]);
         ++timeIteration;
     }
     if (dt < DT_MIN) {
