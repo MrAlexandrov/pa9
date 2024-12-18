@@ -110,7 +110,7 @@ public:
 
 private:
     long double RoundIfApproxZero(long double value) const {
-        constexpr long double EPS = 1e-12; 
+        constexpr long double EPS = 1e-300;
         return (-EPS < value && value < EPS ? 0 : value);
     }
 
@@ -120,9 +120,9 @@ private:
             throw std::ios_base::failure("Failed to open the output file: " + DataFile_);
         }
         for (int row = 0; row < DataSize_; ++row) {
-            outFile << std::setw(4) << RoundIfApproxZero(XValues_[row]);
+            outFile << std::setw(12) << RoundIfApproxZero(XValues_[row]) << "\t";
             for (auto& data : Datas_) {
-                outFile << std::setw(12) << RoundIfApproxZero(data.GetData(row));
+                outFile << std::setw(12) << RoundIfApproxZero(data.GetData(row)) << "\t";
             }
             outFile << "\n";
         }
