@@ -72,8 +72,7 @@ auto FindAbsMax(const TMatrix<>& matrix) {
 TMatrix<> Gauss(
     const TMatrix<>& coef,
     const TMatrix<>& rightPart
-    )
-{
+) {
     if (coef.Rows() != coef.Cols() || coef.Rows() != rightPart.Rows() || rightPart.Cols() != 1) {
         throw std::runtime_error("Error in function Gauss(): size of coef-matrix must be [n]x[n] and size of rightPart-matrix mustbe [n]x[1].");
     }
@@ -144,8 +143,7 @@ void Initialize(
     const std::vector<long double>& ucb,
     const std::vector<long double>& il2,
     const std::vector<long double>& u_new
-    )
-{
+) {
     residualVector = {
         {
             basis[0][0] / R2
@@ -267,12 +265,12 @@ bool PerformNewtonIteration(
 }
 
 int main() {
-    constexpr long double DT_MIN = 1e-15;                               // минимальный шаг интегрирования по времени
+    constexpr long double DT_MIN = 1e-12;                               // минимальный шаг интегрирования по времени
     constexpr long double EPS_MIN = 1e-6;                               // нижняя граница для оценки локальной точности
     constexpr long double EPS_MAX = 5e-2;                               // верхняя граница для оценки локальной точности
     constexpr long double TIME_MAX = 1e-3;                              // время расчёта
     long double currentTime = 0;                                        // время
-    long double dt = DT_MIN;                                            // шаг интегрирования по времени
+    long double dt = 1e-8;                                            // шаг интегрирования по времени
     long double dt_prev1 = dt;
     long double dt_prev2 = dt;                                          // предыдущие шаги интегрирования по времени
     TMatrix<> basis(5, 1);                                   // вектор базиса метода (узловые потенциалы)
