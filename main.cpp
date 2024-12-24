@@ -28,8 +28,9 @@ constexpr long double Re1 = 1e-6;
 constexpr long double T = 1e-4;
 constexpr long double C_NEW = 1e-6;
 
-long double I2(long double currentTime) {
-    return (1e1 / Re1) * std::sin(2 * M_PI * currentTime / T);
+long double I2(long double currentTime, long double p0, long double p4) {
+    // return (1e1 / Re1) * std::sin(2 * M_PI * currentTime / T);
+    return (p0 - p4 + 15) / Re1;
 }
 
 long double Id(long double p3, long double p5) {
@@ -149,7 +150,7 @@ void Initialize(
             basis[0][0] / R2
             + C1 * (basis[0][0] - basis[1][0] - uc1.back()) / dt
             + C_NEW * (basis[0][0] - basis[4][0] - u_new.back()) / dt
-            + I2(currentTime)
+            + I2(currentTime, basis[0][0], basis[4][0])
             - (basis[3][0] - basis[0][0]) / Re1
         },
         {
@@ -163,7 +164,7 @@ void Initialize(
             + Id(basis[2][0], basis[4][0])
         },
         {
-            -I2(currentTime)
+            -I2(currentTime, basis[0][0], basis[4][0])
             + (basis[3][0] - basis[0][0]) / Re1
             + (il2.back() + dt * (basis[3][0] - basis[4][0]) / L2)
         },
@@ -250,6 +251,7 @@ bool PerformNewtonIteration(
     // Выполняем итерационный процесс
     while (std::fabs(FindAbsMax(delta).value) > eps && n < MAX_STEPS) {
         Initialize(timeIteration, currentTime, dt, nodeAdmittance, residualVector, basis, uc1, uc2, ucb, il2, u_new);
+        std::cout << nodeAdmittance << std::endl;
         delta = Gauss(nodeAdmittance, -residualVector);
         basis += delta;
         ++n;
