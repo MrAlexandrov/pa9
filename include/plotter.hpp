@@ -9,6 +9,7 @@
 #include <sstream>
 #include <vector>
 #include <iostream>
+#include <cmath>
 
 namespace NPlotter {
 
@@ -114,15 +115,30 @@ private:
         return (-EPS < value && value < EPS ? 0 : value);
     }
 
+    long double Outer(long double value) const {
+        if (std::isfinite(value)) {
+            return value;
+        } else {
+            if (std::isinf(value)) {
+                return std::numeric_limits<long double>::max();
+            } else if (std::isinf(-value)) {
+                return std::numeric_limits<long double>::min();
+            } else if (std::isnan(value)) {
+                return 0;
+            }
+        }
+        return value;
+    }
+
     void SaveDataToFile() const {
         std::ofstream outFile(DataFile_);
         if (!outFile.is_open()) {
             throw std::ios_base::failure("Failed to open the output file: " + DataFile_);
         }
         for (int row = 0; row < DataSize_; ++row) {
-            outFile << std::setw(12) << RoundIfApproxZero(XValues_[row]) << "\t";
+            outFile << std::setw(12) << Outer(XValues_[row]) << "\t";
             for (auto& data : Datas_) {
-                outFile << std::setw(12) << RoundIfApproxZero(data.GetData(row)) << "\t";
+                outFile << std::setw(12) << Outer(data.GetData(row)) << "\t";
             }
             outFile << "\n";
         }

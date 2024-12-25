@@ -1,6 +1,7 @@
 PROJECT_NAME = main
 
 CXXFLAGS += -DDEBUG
+CXXFLAGS += -O0
 
 INPUT_FILE = input.txt
 OUTPUT_FILE = output.txt

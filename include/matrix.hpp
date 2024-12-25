@@ -1,7 +1,9 @@
 #pragma once
 
+#include <cmath>
 #include <initializer_list>
 #include <iomanip>
+#include <limits>
 #include <stdexcept>
 #include <vector>
 #include <iostream>
@@ -365,10 +367,21 @@ bool TMatrix<T>::operator==(const TMatrix<T>& other) const {
 
 template <typename T>
 std::ostream& operator<<(std::ostream& out, const TMatrix<T>& matrix) {
-    constexpr int width = 10;
+    constexpr int width = 30;
 	for (const auto& row : matrix.Data_) {
 		for (const auto& elem : row) {
-			out << std::setw(width) << elem;
+			out << std::setw(width);
+            if (std::isfinite(elem)) {
+                out << elem;
+            } else {
+                if (std::isinf(elem)) {
+                    out << std::numeric_limits<long double>::max();
+                } else if (std::isinf(-elem)) {
+                    out << std::numeric_limits<long double>::min();
+                } else if (std::isnan(elem)) {
+                    out << 0;
+                }
+            }
 		}
 		out << "\n";
 	}

@@ -1,7 +1,9 @@
 #include "matrix.hpp"
 #include "plotter.hpp"
 
+#include <iomanip>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <vector>
 #include <algorithm>
@@ -33,16 +35,24 @@ long double I2(long double currentTime, long double p0, long double p4) {
     return (p0 - p4 + 15) / Re1;
 }
 
-long double Id(long double p3, long double p5) {
-    return It * (std::exp((p3 - p5) / MFt) - 1);
+long double dI2_dp0() {
+    return 1.0 / Re1;
 }
 
-long double dId_dp3(long double p3, long double p5) {
-    return It * std::exp((p3 - p5) / MFt) / MFt;
+long double dI2_dp4() {
+    return -1.0 / Re1;
 }
 
-long double dId_dp5(long double p3, long double p5) {
-    return -It * std::exp((p3 - p5) / MFt) / MFt;
+long double Id(long double p2, long double p4) {
+    return It * (std::exp((p2 - p4) / MFt) - 1);
+}
+
+long double dId_dp2(long double p2, long double p4) {
+    return It * std::exp((p2 - p4) / MFt) / MFt;
+}
+
+long double dId_dp4(long double p2, long double p4) {
+    return -It * std::exp((p2 - p4) / MFt) / MFt;
 }
 
 template<typename T>
@@ -105,6 +115,11 @@ TMatrix<> Gauss(
         }
         for (int j = i + 1; j < a.Rows(); ++j) {
             long double m = a[j][i] / a[i][i];
+            if (a[i][i] < static_cast<long double>(1e-20)) {
+                // m = std::numeric_limits<long double>::max();
+                m = 1e10;
+                // throw std::runtime_error("Errrorr");
+            }
             for (int k = i; k < a.Cols(); ++k) {
                 a[j][k] -= m * a[i][k];
             }
@@ -145,6 +160,11 @@ void Initialize(
     const std::vector<long double>& il2,
     const std::vector<long double>& u_new
 ) {
+    auto& p0 = basis[0][0];
+    auto& p1 = basis[1][0];
+    auto& p2 = basis[2][0];
+    auto& p3 = basis[3][0];
+    auto& p4 = basis[4][0];
     residualVector = {
         {
             basis[0][0] / R2
@@ -180,11 +200,11 @@ void Initialize(
 
     nodeAdmittance = {
         {
-            1 / R2 + C1 / dt + (C_NEW / dt) + 1 / Re1,
+            1 / R2 + C1 / dt + (C_NEW / dt) + dI2_dp0(),
             -C1 / dt,
             0,
-            -1 / Re1,
-            -(C_NEW / dt)
+            0,
+            -(C_NEW / dt) - dI2_dp4()
         },
         {
             -C1 / dt,
@@ -195,26 +215,51 @@ void Initialize(
         },
         {
             0,
-            -1 / Rb,
-            1 / Rb + Cb / dt + 1 / Ru + dId_dp3(basis[2][0], basis[4][0]),
+            -1.0 / Rb,
+            1.0 / Rb + Cb / dt + 1 / Ru - dId_dp2(basis[2][0], basis[4][0]),
             0,
-            -Cb / dt - 1 / Ru + dId_dp5(basis[2][0], basis[4][0])
+            -Cb / dt - 1.0 / Ru + dId_dp4(basis[2][0], basis[4][0])
         },
         {
-            -1 / Re1,
+            -dI2_dp0(),
             0,
             0,
-            1 / Re1 + dt / L2,
-            -dt / L2
+            dt / L2,
+            -dt / L2 + dI2_dp4()
         },
         {
             -(C_NEW / dt),
             0,
-            -Cb / dt - 1 / Ru - dId_dp3(basis[2][0], basis[4][0]),
+            -Cb / dt - 1.0 / Ru - dId_dp2(basis[2][0], basis[4][0]),
             -dt / L2,
-            Cb / dt + 1 / Ru - dId_dp5(basis[2][0], basis[4][0]) + C2 / dt + dt / L2 + (C_NEW / dt)
+            Cb / dt + 1.0 / Ru - dId_dp4(basis[2][0], basis[4][0]) + C2 / dt + dt / L2 + (C_NEW / dt)
         }
     };
+    // std::cout << Cb / dt << std::endl;
+    // std::cout << 1 / Ru << std::endl;
+    // std::cout << nodeAdmittance[2][2] << std::endl;
+    // std::cout << nodeAdmittance[2][4] << std::endl;
+    // std::cout << nodeAdmittance[4][2] << std::endl;
+    // std::cout << nodeAdmittance[4][4] << std::endl;
+    // std::cout << 1 / Rb + Cb / dt + 1 / Ru - dId_dp2(basis[2][0], basis[4][0]) << std::endl;
+    // std::cout << -Cb / dt - 1 / Ru + dId_dp4(basis[2][0], basis[4][0]) << std::endl;
+    // std::cout << -Cb / dt - 1 / Ru - dId_dp2(basis[2][0], basis[4][0]) << std::endl;
+    // std::cout << Cb / dt + 1 / Ru - dId_dp4(basis[2][0], basis[4][0]) + C2 / dt + dt / L2 + (C_NEW / dt) << std::endl;
+    
+    // std::cout << 1.0 / Rb << std::endl;
+    // std::cout << Cb / dt << std::endl;
+    // std::cout << 1 / Ru << std::endl;
+    // std::cout << dId_dp2(basis[2][0], basis[4][0]) << std::endl;
+    
+    std::cout << It << std::endl;
+    std::cout << p2 << std::endl;
+    std::cout << p4 << std::endl;
+    std::cout << "MFt: " << MFt << std::endl;
+    std::cout << "(p2 - p4): " << (p2 - p4) << std::endl;
+    std::cout << "(p2 - p4) / MFt: " << (p2 - p4) / MFt << std::endl;
+    std::cout << "std::exp((p2 - p4) / MFt): " << std::exp((p2 - p4) / MFt) << std::endl;
+    std::cout << "It * std::exp((p2 - p4) / MFt) / MFt: " << It * std::exp((p2 - p4) / MFt) / MFt << std::endl;
+    std::cout << std::endl;
 }
 
 template<typename T>
@@ -251,7 +296,9 @@ bool PerformNewtonIteration(
     // Выполняем итерационный процесс
     while (std::fabs(FindAbsMax(delta).value) > eps && n < MAX_STEPS) {
         Initialize(timeIteration, currentTime, dt, nodeAdmittance, residualVector, basis, uc1, uc2, ucb, il2, u_new);
-        std::cout << nodeAdmittance << std::endl;
+        // std::cout << std::setprecision(10) << nodeAdmittance << std::endl;
+        // std::cout << std::setprecision(10) << nodeAdmittance << std::endl;
+
         delta = Gauss(nodeAdmittance, -residualVector);
         basis += delta;
         ++n;
@@ -334,10 +381,10 @@ int main() {
         ++timeIteration;
     }
     if (dt < DT_MIN) {
-        std::cerr << "dt < DT_MIN at " << timeIteration << " time iteration!\n";
+        // std::cerr << "dt < DT_MIN at " << timeIteration << " time iteration!\n";
     }
-    std::cout << "Итераций по времени: " << timeIteration << std::endl;
-    std::cout << "Всего итераций: " << currentIteration << std::endl;
+    // std::cout << "Итераций по времени: " << timeIteration << std::endl;
+    // std::cout << "Всего итераций: " << currentIteration << std::endl;
 
     std::vector<std::string> colors = {"red", "orange", "green", "blue", "violet"};
 
