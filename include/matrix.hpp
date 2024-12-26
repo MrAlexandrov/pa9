@@ -367,10 +367,11 @@ bool TMatrix<T>::operator==(const TMatrix<T>& other) const {
 
 template <typename T>
 std::ostream& operator<<(std::ostream& out, const TMatrix<T>& matrix) {
-    constexpr int width = 30;
+    constexpr int width = 10;
 	for (const auto& row : matrix.Data_) {
 		for (const auto& elem : row) {
-			out << std::setw(width);
+			out << std::setw(width) << elem;
+            continue;
             if (std::isfinite(elem)) {
                 out << elem;
             } else {

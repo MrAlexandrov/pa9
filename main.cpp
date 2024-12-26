@@ -200,11 +200,11 @@ void Initialize(
 
     nodeAdmittance = {
         {
-            1 / R2 + C1 / dt + (C_NEW / dt) + dI2_dp0(),
+            1 / R2 + C1 / dt + (C_NEW / dt) + 1 / Re1,
             -C1 / dt,
             0,
-            0,
-            -(C_NEW / dt) - dI2_dp4()
+            - 1 / Re1,
+            -(C_NEW / dt)
         },
         {
             -C1 / dt,
@@ -221,11 +221,11 @@ void Initialize(
             -Cb / dt - 1.0 / Ru + dId_dp4(basis[2][0], basis[4][0])
         },
         {
-            -dI2_dp0(),
+            -1 / Re1,
             0,
             0,
             dt / L2,
-            -dt / L2 + dI2_dp4()
+            -dt / L2 + 1 / Re1
         },
         {
             -(C_NEW / dt),
@@ -315,9 +315,9 @@ bool PerformNewtonIteration(
 
 int main() {
     constexpr long double DT_MIN = 1e-12;                               // минимальный шаг интегрирования по времени
-    constexpr long double EPS_MIN = 1e-6;                               // нижняя граница для оценки локальной точности
-    constexpr long double EPS_MAX = 5e-2;                               // верхняя граница для оценки локальной точности
-    constexpr long double TIME_MAX = 1e-3;                              // время расчёта
+    constexpr long double EPS_MIN = 1e-8;                               // нижняя граница для оценки локальной точности
+    constexpr long double EPS_MAX = 1e-2;                               // верхняя граница для оценки локальной точности
+    constexpr long double TIME_MAX = 2e-5;                              // время расчёта
     long double currentTime = 0;                                        // время
     long double dt = 1e-8;                                            // шаг интегрирования по времени
     long double dt_prev1 = dt;
