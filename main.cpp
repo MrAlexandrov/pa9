@@ -251,15 +251,15 @@ void Initialize(
     // std::cout << 1 / Ru << std::endl;
     // std::cout << dId_dp2(basis[2][0], basis[4][0]) << std::endl;
     
-    std::cout << It << std::endl;
-    std::cout << p2 << std::endl;
-    std::cout << p4 << std::endl;
-    std::cout << "MFt: " << MFt << std::endl;
-    std::cout << "(p2 - p4): " << (p2 - p4) << std::endl;
-    std::cout << "(p2 - p4) / MFt: " << (p2 - p4) / MFt << std::endl;
-    std::cout << "std::exp((p2 - p4) / MFt): " << std::exp((p2 - p4) / MFt) << std::endl;
-    std::cout << "It * std::exp((p2 - p4) / MFt) / MFt: " << It * std::exp((p2 - p4) / MFt) / MFt << std::endl;
-    std::cout << std::endl;
+    // std::cout << It << std::endl;
+    // std::cout << p2 << std::endl;
+    // std::cout << p4 << std::endl;
+    // std::cout << "MFt: " << MFt << std::endl;
+    // std::cout << "(p2 - p4): " << (p2 - p4) << std::endl;
+    // std::cout << "(p2 - p4) / MFt: " << (p2 - p4) / MFt << std::endl;
+    // std::cout << "std::exp((p2 - p4) / MFt): " << std::exp((p2 - p4) / MFt) << std::endl;
+    // std::cout << "It * std::exp((p2 - p4) / MFt) / MFt: " << It * std::exp((p2 - p4) / MFt) / MFt << std::endl;
+    // std::cout << std::endl;
 }
 
 template<typename T>
@@ -296,8 +296,7 @@ bool PerformNewtonIteration(
     // Выполняем итерационный процесс
     while (std::fabs(FindAbsMax(delta).value) > eps && n < MAX_STEPS) {
         Initialize(timeIteration, currentTime, dt, nodeAdmittance, residualVector, basis, uc1, uc2, ucb, il2, u_new);
-        // std::cout << std::setprecision(10) << nodeAdmittance << std::endl;
-        // std::cout << std::setprecision(10) << nodeAdmittance << std::endl;
+        std::cout << std::setprecision(10) << nodeAdmittance << std::endl;
 
         delta = Gauss(nodeAdmittance, -residualVector);
         basis += delta;
