@@ -1,11 +1,19 @@
-#include "matrix.hpp"
-#include "plotter.hpp"
+// #ifdef WINDOWS
+
+// #include "matrix.hpp"
+// #include "plotter.hpp"
+
+// #else
+
+#include <junk/mrralexandrov/test_directory/pa9/include/matrix.hpp>
+#include <junk/mrralexandrov/test_directory/pa9/include/plotter.hpp>
+
+// #endif
 
 #include <iostream>
 #include <stdexcept>
 #include <vector>
 #include <algorithm>
-#include <cstdio>
 #include <cmath>
 #include <string>
 // Параметры элементов схемы
@@ -36,19 +44,19 @@ long double Id(long double p3, long double p5) {
     return It * (std::exp((p3 - p5) / MFt) - 1);
 }
 
-long double dId_dp3(long double p3, long double p5) {
+long double DiffIdDiffp3(long double p3, long double p5) {
     return It * std::exp((p3 - p5) / MFt) / MFt;
 }
 
-long double dId_dp5(long double p3, long double p5) {
+long double DiffIdDiffp5(long double p3, long double p5) {
     return -It * std::exp((p3 - p5) / MFt) / MFt;
 }
 
 template<typename T>
 struct TMaximum {
-    T value;
-    int row;
-    int col;
+    T Value;
+    int Row;
+    int Col;
 };
 
 auto FindAbsMax(const TMatrix<>& matrix) {
@@ -83,7 +91,7 @@ TMatrix<> Gauss(
                                                           // соответствующихим строк решения
 
     // Прямой ход метода Гаусса
-    for (int i = 0; i < a.Cols() - 1; ++i) {
+    for (int i = 0; i < static_cast<int>(a.Cols()) - 1; ++i) {
         auto [max, rowMax, colMax] = 
             FindAbsMax(GetSubMatrix(a, i, a.Rows(), i,  a.Cols()));
         rowMax += i;
@@ -94,7 +102,7 @@ TMatrix<> Gauss(
             std::swap(b[i], b[rowMax]);
         }
         if (i != colMax) {  // Перестановка столбцов
-            for (int k = 0; k < a.Rows(); ++k) {
+            for (int k = 0; k < static_cast<int>(a.Rows()); ++k) {
                 std::swap(a[k][i], a[k][colMax]);
                 p[i] = colMax;
             }
@@ -102,9 +110,9 @@ TMatrix<> Gauss(
         if (std::fabs(a[i][i]) < EPS) {
             throw std::runtime_error("Error in fuction Gauss(): coef-matrix must not be degenerate.");
         }
-        for (int j = i + 1; j < a.Rows(); ++j) {
+        for (int j = i + 1; j < static_cast<int>(a.Rows()); ++j) {
             long double m = a[j][i] / a[i][i];
-            for (int k = i; k < a.Cols(); ++k) {
+            for (int k = i; k < static_cast<int>(a.Cols()); ++k) {
                 a[j][k] -= m * a[i][k];
             }
             b[j][0] -= m * b[i][0];
@@ -116,7 +124,7 @@ TMatrix<> Gauss(
     }
     for (int i = b.Rows() - 1; i >= 0; --i) {
         long double sum = 0.0;
-        for (int j = i + 1; j < a.Rows(); ++j) {
+        for (int j = i + 1; j < static_cast<int>(a.Rows()); ++j) {
             sum += a[i][j] * result[j][0];
         }
 
@@ -195,9 +203,9 @@ void Initialize(
         {
             0,
             -1 / Rb,
-            1 / Rb + Cb / dt + 1 / Ru + dId_dp3(basis[2][0], basis[4][0]),
+            1 / Rb + Cb / dt + 1 / Ru + DiffIdDiffp3(basis[2][0], basis[4][0]),
             0,
-            -Cb / dt - 1 / Ru + dId_dp5(basis[2][0], basis[4][0])
+            -Cb / dt - 1 / Ru + DiffIdDiffp5(basis[2][0], basis[4][0])
         },
         {
             -1 / Re1,
@@ -209,9 +217,9 @@ void Initialize(
         {
             -(C_NEW / dt),
             0,
-            -Cb / dt - 1 / Ru - dId_dp3(basis[2][0], basis[4][0]),
+            -Cb / dt - 1 / Ru - DiffIdDiffp3(basis[2][0], basis[4][0]),
             -dt / L2,
-            Cb / dt + 1 / Ru - dId_dp5(basis[2][0], basis[4][0]) + C2 / dt + dt / L2 + (C_NEW / dt)
+            Cb / dt + 1 / Ru - DiffIdDiffp5(basis[2][0], basis[4][0]) + C2 / dt + dt / L2 + (C_NEW / dt)
         }
     };
 }
@@ -248,7 +256,7 @@ bool PerformNewtonIteration(
     int n = 0; // счётчик итераций Ньютона
 
     // Выполняем итерационный процесс
-    while (std::fabs(FindAbsMax(delta).value) > eps && n < MAX_STEPS) {
+    while (std::fabs(FindAbsMax(delta).Value) > eps && n < MAX_STEPS) {
         Initialize(timeIteration, currentTime, dt, nodeAdmittance, residualVector, basis, uc1, uc2, ucb, il2, u_new);
         delta = Gauss(nodeAdmittance, -residualVector);
         basis += delta;
@@ -288,7 +296,7 @@ int main() {
     int timeIteration = 1;
     int currentIteration = 1;
     while (dt >= DT_MIN && currentTime <= TIME_MAX) {
-        int n = 0;
+        // int n = 0;
         basis = ((previousBasis[0] - previousBasis[1]) * (dt_prev1 + dt) / dt) + previousBasis[1]; // начальные приближения
         bool success = PerformNewtonIteration(timeIteration, currentTime, dt, basis, uc1, uc2, ucb, il2, u_new, currentIteration);
 
@@ -298,7 +306,7 @@ int main() {
         }
 
         if (timeIteration > 2) {  // оценка локальной точности
-            long double d = 0.5 * dt * dt * std::fabs(FindAbsMax(((previousBasis[0] - previousBasis[1]) * (1 / (dt_prev1 * dt_prev1)) - (previousBasis[1] - previousBasis[2]) * (1 / (dt_prev1 * dt_prev2)))).value);
+            long double d = 0.5 * dt * dt * std::fabs(FindAbsMax(((previousBasis[0] - previousBasis[1]) * (1 / (dt_prev1 * dt_prev1)) - (previousBasis[1] - previousBasis[2]) * (1 / (dt_prev1 * dt_prev2)))).Value);
             if (d < EPS_MIN) {
                 currentTime += dt;
                 dt_prev2 = dt_prev1;

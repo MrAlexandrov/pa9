@@ -17,7 +17,7 @@ private:
         using reverse_iterator = typename std::vector<T>::reverse_iterator;
         using const_reverse_iterator = typename std::vector<T>::const_reverse_iterator;
 
-        constexpr ProxyRow(size_t cols, const T& value = T()) : proxy_data_(cols, value) {}
+        constexpr ProxyRow(size_t cols, const T& value = T()) : ProxyData(cols, value) {}
         constexpr ProxyRow(const ProxyRow&) = default;
         constexpr ProxyRow(ProxyRow&&) = default;
         constexpr ProxyRow& operator=(const ProxyRow&) = default;
@@ -25,42 +25,42 @@ private:
         constexpr bool operator==(const ProxyRow& other) const;
         
 
-        constexpr ProxyRow(const std::vector<T>& other) : proxy_data_(other) {}
-        constexpr ProxyRow(std::vector<T>&& other) : proxy_data_(std::move(other)) {}
+        constexpr ProxyRow(const std::vector<T>& other) : ProxyData(other) {}
+        constexpr ProxyRow(std::vector<T>&& other) : ProxyData(std::move(other)) {}
         constexpr ProxyRow& operator=(const std::vector<T>& other);
         constexpr ProxyRow& operator=(std::vector<T>&& other);
         constexpr bool operator==(const std::vector<T>& other) const;
         
-        ProxyRow(std::initializer_list<T> list) : proxy_data_(list) {}
+        ProxyRow(std::initializer_list<T> list) : ProxyData(list) {}
         
         operator std::vector<T>() const; 
 
         friend bool operator==(const std::vector<T>& vec, const ProxyRow& row) {
-            return vec == row.proxy_data_;
+            return vec == row.ProxyData;
         }
 
         constexpr size_t size() const noexcept;
 
-        constexpr iterator begin() noexcept { return proxy_data_.begin(); }
-        constexpr const_iterator begin() const noexcept { return proxy_data_.begin(); }
-        constexpr iterator end() noexcept { return proxy_data_.end(); }
-        constexpr const_iterator end() const noexcept { return proxy_data_.end(); }
+        constexpr iterator begin() noexcept { return ProxyData.begin(); }
+        constexpr const_iterator begin() const noexcept { return ProxyData.begin(); }
+        constexpr iterator end() noexcept { return ProxyData.end(); }
+        constexpr const_iterator end() const noexcept { return ProxyData.end(); }
 
-        constexpr const_iterator cbegin() const noexcept { return proxy_data_.cbegin(); }
-        constexpr const_iterator cend() const noexcept { return proxy_data_.cend(); }
+        constexpr const_iterator cbegin() const noexcept { return ProxyData.cbegin(); }
+        constexpr const_iterator cend() const noexcept { return ProxyData.cend(); }
 
-        constexpr reverse_iterator rbegin() noexcept { return proxy_data_.rbegin(); }
-        constexpr const_reverse_iterator rbegin() const noexcept { return proxy_data_.rbegin(); }
-        constexpr reverse_iterator rend() noexcept { return proxy_data_.rend(); }
-        constexpr const_reverse_iterator rend() const noexcept { return proxy_data_.rend(); }
+        constexpr reverse_iterator rbegin() noexcept { return ProxyData.rbegin(); }
+        constexpr const_reverse_iterator rbegin() const noexcept { return ProxyData.rbegin(); }
+        constexpr reverse_iterator rend() noexcept { return ProxyData.rend(); }
+        constexpr const_reverse_iterator rend() const noexcept { return ProxyData.rend(); }
 
-        constexpr const_reverse_iterator crbegin() const noexcept { return proxy_data_.crbegin(); }
-        constexpr const_reverse_iterator crend() const noexcept { return proxy_data_.crend(); }
+        constexpr const_reverse_iterator crbegin() const noexcept { return ProxyData.crbegin(); }
+        constexpr const_reverse_iterator crend() const noexcept { return ProxyData.crend(); }
 
         T& operator[](size_t col);
         const T& operator[](size_t col) const;
 
-        std::vector<T> proxy_data_;
+        std::vector<T> ProxyData;
     };
 public:
     using value_type = T;
@@ -74,8 +74,8 @@ public:
     constexpr TMatrix(const std::vector<ProxyRow>& data) : Data_(data) {}
     constexpr TMatrix(std::initializer_list<std::initializer_list<T>> list);
     
-    const size_t Rows() const noexcept;
-    const size_t Cols() const noexcept;
+    size_t Rows() const noexcept;
+    size_t Cols() const noexcept;
 
 	ProxyRow& operator[](size_t row);
 	const ProxyRow& operator[](size_t row) const;
@@ -118,49 +118,49 @@ private:
 
 template <typename T>
 TMatrix<T>::ProxyRow::operator std::vector<T>() const {
-    return proxy_data_;
+    return ProxyData;
 } 
 
 template <typename T>
 constexpr typename TMatrix<T>::ProxyRow& TMatrix<T>::ProxyRow::operator=(const std::vector<T>& other) {
-    proxy_data_ = other;
+    ProxyData = other;
     return *this;
 }
 
 template <typename T>
 constexpr typename TMatrix<T>::ProxyRow& TMatrix<T>::ProxyRow::operator=(std::vector<T>&& other) {
-    proxy_data_ = std::move(other);
+    ProxyData = std::move(other);
     return *this;
 }
 
 template <typename T>
 constexpr bool TMatrix<T>::ProxyRow::operator==(const ProxyRow& other) const {
-    return proxy_data_ == other.proxy_data_;
+    return ProxyData == other.ProxyData;
 }
 
 template <typename T>
 constexpr bool TMatrix<T>::ProxyRow::operator==(const std::vector<T>& other) const {
-    return proxy_data_ == other;
+    return ProxyData == other;
 }
 
 template <typename T>
 constexpr size_t TMatrix<T>::ProxyRow::size() const noexcept {
-    return proxy_data_.size();
+    return ProxyData.size();
 } 
 
 template <typename T>
 T& TMatrix<T>::ProxyRow::operator[](size_t col) {
-    if (col >= proxy_data_.size()) {
+    if (col >= ProxyData.size()) {
         throw std::out_of_range("Index out of range");
     }
-    return proxy_data_[col];
+    return ProxyData[col];
 }
 template <typename T>
 const T& TMatrix<T>::ProxyRow::operator[](size_t col) const {
-    if (col >= proxy_data_.size()) {
+    if (col >= ProxyData.size()) {
         throw std::out_of_range("Index out of range");
     }
-    return proxy_data_[col];
+    return ProxyData[col];
 }
 
 
@@ -179,11 +179,11 @@ constexpr TMatrix<T>::TMatrix(std::initializer_list<std::initializer_list<T>> li
 }
 
 template <typename T>
-const size_t TMatrix<T>::Rows() const noexcept { return Data_.size(); }
+size_t TMatrix<T>::Rows() const noexcept { return Data_.size(); }
 
 
 template <typename T>
-const size_t TMatrix<T>::Cols() const noexcept { return Data_.empty() ? 0 : Data_.front().size(); }
+size_t TMatrix<T>::Cols() const noexcept { return Data_.empty() ? 0 : Data_.front().size(); }
 
 
 template <typename T>
