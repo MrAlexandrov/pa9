@@ -1,5 +1,6 @@
 #include "matrix.hpp"
 #include "plotter.hpp"
+#include "interfase.hpp"
 
 #include <iomanip>
 #include <iostream>
@@ -14,7 +15,7 @@
 
 using namespace NMatrix;
 
-constexpr long double EPS = 1e-13;
+// constexpr long double EPS = 1e-13;
 
 constexpr long double R2 = 1000.0;
 // constexpr long double R21 = 1e+5;
@@ -53,97 +54,6 @@ long double dId_dp2(long double p2, long double p4) {
 
 long double dId_dp4(long double p2, long double p4) {
     return -It * std::exp((p2 - p4) / MFt) / MFt;
-}
-
-template<typename T>
-struct TMaximum {
-    T value;
-    int row;
-    int col;
-};
-
-auto FindAbsMax(const TMatrix<>& matrix) {
-    int resutlRow = 0;
-    int resutlCol = 0;
-    long double maximum = matrix[0][0];
-    for (int row = 0, endRow = matrix.Rows(); row < endRow; ++row) {
-        for (int col = 0, endCol = matrix.Cols(); col < endCol; ++col) {
-            auto value = std::fabs(matrix[row][col]);
-            if (maximum < value) {
-                resutlRow = row;
-                resutlCol = col;
-                maximum = value;
-            }
-        }
-    }
-    return TMaximum{maximum, resutlRow, resutlCol};
-};
-
-// Метод Гаусса c выбором главного элемента
-TMatrix<> Gauss(
-    const TMatrix<>& coef,
-    const TMatrix<>& rightPart
-) {
-    if (coef.Rows() != coef.Cols() || coef.Rows() != rightPart.Rows() || rightPart.Cols() != 1) {
-        throw std::runtime_error("Error in function Gauss(): size of coef-matrix must be [n]x[n] and size of rightPart-matrix mustbe [n]x[1].");
-    }
-    TMatrix<> a = coef;
-    TMatrix<> b = rightPart;
-    TMatrix<> result(b.Rows(), 1);
-    std::vector<int> p(a.Rows());                       // вектор перестановок столбцов матрицы коэффициентов и
-                                                          // соответствующихим строк решения
-
-    // Прямой ход метода Гаусса
-    for (int i = 0; i < a.Cols() - 1; ++i) {
-        auto [max, rowMax, colMax] = 
-            FindAbsMax(GetSubMatrix(a, i, a.Rows(), i,  a.Cols()));
-        rowMax += i;
-        colMax += i;
-
-        if (i != rowMax) {  // Перестановка строк
-            std::swap(a[i], a[rowMax]);
-            std::swap(b[i], b[rowMax]);
-        }
-        if (i != colMax) {  // Перестановка столбцов
-            for (int k = 0; k < a.Rows(); ++k) {
-                std::swap(a[k][i], a[k][colMax]);
-                p[i] = colMax;
-            }
-        }
-        if (std::fabs(a[i][i]) < EPS) {
-            throw std::runtime_error("Error in fuction Gauss(): coef-matrix must not be degenerate.");
-        }
-        for (int j = i + 1; j < a.Rows(); ++j) {
-            long double m = a[j][i] / a[i][i];
-            if (a[i][i] < static_cast<long double>(1e-20)) {
-                // m = std::numeric_limits<long double>::max();
-                m = 1e10;
-                // throw std::runtime_error("Errrorr");
-            }
-            for (int k = i; k < a.Cols(); ++k) {
-                a[j][k] -= m * a[i][k];
-            }
-            b[j][0] -= m * b[i][0];
-        }
-    }
-    // Обратный ход метода Гаусса
-    if (std::fabs(a[a.Rows() - 1][a.Cols() - 1]) < EPS) {
-        throw std::runtime_error("Error in fuction Gauss(): coef-matrix must not be degenerate.");
-    }
-    for (int i = b.Rows() - 1; i >= 0; --i) {
-        long double sum = 0.0;
-        for (int j = i + 1; j < a.Rows(); ++j) {
-            sum += a[i][j] * result[j][0];
-        }
-
-        result[i][0] = (b[i][0] - sum) / a[i][i];
-    }
-    for (int i = p.size() - 1; i >= 0; --i) {  // обратная перестановка строк решения
-        if (p[i] != 0) {
-            std::swap(result[i][0], result[p[i]][0]);
-        }
-    }
-    return result;
 }
 
 // Функция заполнения матрицы проводимости и вектора токов
