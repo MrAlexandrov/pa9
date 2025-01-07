@@ -52,7 +52,7 @@ public:
     }
 
     long double GetData(int index) const {
-        assert(0 <= index && index < Data_.size());
+        assert(0 <= index && index < static_cast<int>(Data_.size()));
         return Data_[index];
     }
 
@@ -67,10 +67,10 @@ private:
 class TPlotter final {
 public:
     explicit TPlotter(const std::string& filename)
-        : ImageName_(filename + ".png")
-        , DataFile_(filename + ".csv")
-        , Width_(800)
+        : Width_(800)
         , Height_(600)
+        , ImageName_(filename + ".png")
+        , DataFile_(filename + ".csv")
         , Title_("Title")
         , XLabel_("Time, seconds")
         , YLabel_("Phi value")
