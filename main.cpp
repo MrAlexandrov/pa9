@@ -20,7 +20,7 @@
 #include <string>
 // Параметры элементов схемы
 
-// #define CHANGE
+#define CHANGE_E1
 
 using namespace NMatrix;
 
@@ -56,7 +56,7 @@ long double DiffIdDiffp5(long double p3, long double p5) {
     return -It * std::exp((p3 - p5) / MFt) / MFt;
 }
 
-#ifdef CHANGE
+#ifdef CHANGE_E1
 long double NewI2(long double phi0, long double phi4) {
     return (15 + (phi0 - phi4)) / Re1;
 }
@@ -68,7 +68,7 @@ long double NewI2DiffPhi0() {
 long double NewI2DiffPhi4() {
     return - 1 / Re1;
 }
-#endif // CHANGE
+#endif // CHANGE_E1
 
 template<typename T>
 struct TMaximum {
@@ -175,11 +175,11 @@ void Initialize(
             (basis[0][0] / R2) - 0                                  // resistor R2                  0, ground
             + C1 * (basis[0][0] - basis[1][0] - uc1.back()) / dt        // capasitor C1                 0, 1
             + C_NEW * (basis[0][0] - basis[4][0] - u_new.back()) / dt   // capasitor C_NEW              0, 4
-            #ifdef CHANGE
+            #ifdef CHANGE_E1
             + NewI2(basis[0][0], basis[4][0])
             #else
             + I2(currentTime)                                           // inductor I2 from EDS         0, 3
-            #endif // CHANGE
+            #endif // CHANGE_E1
             + (basis[0][0] - basis[3][0]) / Re1                         // resistor Re1 from EDS        0, 3
         },
         {
@@ -193,11 +193,11 @@ void Initialize(
             + Id(basis[2][0], basis[4][0])                       // inductor Id from diode       2, 4
         },
         {
-            #ifdef CHANGE
+            #ifdef CHANGE_E1
             - NewI2(basis[0][0], basis[4][0])
             #else
             - I2(currentTime)                                       // inductor I2 from EDS         3, 0
-            #endif // CHANGE
+            #endif // CHANGE_E1
             - (basis[0][0] - basis[3][0]) / Re1                         // resistor Re1 from EDS        3, 0
             + (il2.back() + dt * (basis[3][0] - basis[4][0]) / L2)      // inductor L2                  3, 4
         },
@@ -213,9 +213,9 @@ void Initialize(
 
     nodeAdmittance = {
         {
-            #ifdef CHANGE
+            #ifdef CHANGE_E1
             + NewI2DiffPhi0()   // added
-            #endif // CHANGE
+            #endif // CHANGE_E1
             + 1 / R2                                                  // resistor R2
             + C1 / dt                                                   // capasitor C1
             + (C_NEW / dt)                                              // capasitor C_NEW
@@ -223,10 +223,9 @@ void Initialize(
             - C1 / dt,                                              // capasitor C1
             0,
             - 1 / Re1,                                              // resistor Re1
-            #ifdef CHANGE
+            #ifdef CHANGE_E1
             + NewI2DiffPhi4()   // added
-            #endif // CHANGE
-            - (C_NEW / dt)                                          // capasitor C_NEW
+            #endif // CHANGE_E1
         },
         {
             - C1 / dt,                                              // capasitor C1
@@ -249,17 +248,17 @@ void Initialize(
             + DiffIdDiffp5(basis[2][0], basis[4][0])             // inductor Id from diode
         },
         {
-            #ifdef CHANGE
+            #ifdef CHANGE_E1
             - NewI2DiffPhi0()   // added
-            #endif // CHANGE
+            #endif // CHANGE_E1
             - 1 / Re1,                                              // resistor Re1
             0,
             0,
             1 / Re1                                                 // resistor Re1
             + dt / L2,                                                  // inductor L2
-            #ifdef CHANGE
+            #ifdef CHANGE_E1
             - NewI2DiffPhi4()   // added
-            #endif // CHANGE
+            #endif // CHANGE_E1
             - dt / L2                                               // inductor L2
         },
         {
