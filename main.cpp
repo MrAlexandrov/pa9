@@ -98,8 +98,8 @@ auto FindAbsMax(const TMatrix<>& matrix) {
 
 // Метод Гаусса c выбором главного элемента
 TMatrix<> Gauss(
-    const TMatrix<>& coef,
-    const TMatrix<>& rightPart
+    const TMatrix<>& coef
+    , const TMatrix<>& rightPart
 ) {
     if (coef.Rows() != coef.Cols() || coef.Rows() != rightPart.Rows() || rightPart.Cols() != 1) {
         throw std::runtime_error("Error in function Gauss(): size of coef-matrix must be [n]x[n] and size of rightPart-matrix mustbe [n]x[1].");
@@ -316,18 +316,18 @@ std::ostream& operator<<(std::ostream& out, const std::vector<T>& other) {
 }
 
 bool PerformNewtonIteration(
-    int timeIteration,
-    long double currentTime,
-    long double dt,
-    NMatrix::TMatrix<>& basis,
-    const std::vector<long double>& uc1,
-    const std::vector<long double>& uc2,
-    const std::vector<long double>& ucb,
-    const std::vector<long double>& il2,
+    int timeIteration
+    , long double currentTime
+    , long double dt
+    , NMatrix::TMatrix<>& basis
+    , const std::vector<long double>& uc1
+    , const std::vector<long double>& uc2
+    , const std::vector<long double>& ucb
+    , const std::vector<long double>& il2
     #ifdef CHANGE_RESISTOR_TO_CAPACITOR
-    const std::vector<long double>& u_new,
+    , const std::vector<long double>& u_new
     #endif // CHANGE_RESISTOR_TO_CAPACITOR
-    int& currentIteration
+    , int& currentIteration
 ) {
     constexpr int MAX_STEPS = 10;   // максимальное число итераций Ньютона
     constexpr long double eps = 1e-9;
