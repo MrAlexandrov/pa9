@@ -20,6 +20,8 @@
 #include <string>
 // Параметры элементов схемы
 
+// #define CHANGE
+
 using namespace NMatrix;
 
 constexpr long double EPS = 1e-13;
@@ -53,6 +55,20 @@ long double DiffIdDiffp3(long double p3, long double p5) {
 long double DiffIdDiffp5(long double p3, long double p5) {
     return -It * std::exp((p3 - p5) / MFt) / MFt;
 }
+
+#ifdef CHANGE
+long double NewI2(long double phi0, long double phi4) {
+    return (15 + (phi0 - phi4)) / Re1;
+}
+
+long double NewI2DiffPhi0() {
+    return 1 / Re1;
+}
+
+long double NewI2DiffPhi4() {
+    return - 1 / Re1;
+}
+#endif // CHANGE
 
 template<typename T>
 struct TMaximum {
@@ -156,72 +172,109 @@ void Initialize(
 ) {
     residualVector = {
         {
-            basis[0][0] / R2
-            + C1 * (basis[0][0] - basis[1][0] - uc1.back()) / dt
-            + C_NEW * (basis[0][0] - basis[4][0] - u_new.back()) / dt
-            + I2(currentTime)
-            - (basis[3][0] - basis[0][0]) / Re1
+            (basis[0][0] / R2) - 0                                  // resistor R2                  0, ground
+            + C1 * (basis[0][0] - basis[1][0] - uc1.back()) / dt        // capasitor C1                 0, 1
+            + C_NEW * (basis[0][0] - basis[4][0] - u_new.back()) / dt   // capasitor C_NEW              0, 4
+            #ifdef CHANGE
+            + NewI2(basis[0][0], basis[4][0])
+            #else
+            + I2(currentTime)                                           // inductor I2 from EDS         0, 3
+            #endif // CHANGE
+            + (basis[0][0] - basis[3][0]) / Re1                         // resistor Re1 from EDS        0, 3
         },
         {
-            -C1 * (basis[0][0] - basis[1][0] - uc1.back()) / dt
-            + (basis[1][0] - basis[2][0]) / Rb
+            - C1 * (basis[0][0] - basis[1][0] - uc1.back()) / dt    // capasitor C1                 1, 0   
+            + (basis[1][0] - basis[2][0]) / Rb                          // resistor Rb from diode       1, 2
         },
         {
-            -(basis[1][0] - basis[2][0]) / Rb
-            + Cb * (basis[2][0] - basis[4][0] - ucb.back()) / dt
-            + (basis[2][0] - basis[4][0]) / Ru
-            + Id(basis[2][0], basis[4][0])
+            - (basis[1][0] - basis[2][0]) / Rb                      // resistor Rb from diode       2, 1
+            + Cb * (basis[2][0] - basis[4][0] - ucb.back()) / dt        // capasitor Cb from diode      2, 4
+            + (basis[2][0] - basis[4][0]) / Ru                          // resistor Ru from diode       2, 4
+            + Id(basis[2][0], basis[4][0])                       // inductor Id from diode       2, 4
         },
         {
-            -I2(currentTime)
-            + (basis[3][0] - basis[0][0]) / Re1
-            + (il2.back() + dt * (basis[3][0] - basis[4][0]) / L2)
+            #ifdef CHANGE
+            - NewI2(basis[0][0], basis[4][0])
+            #else
+            - I2(currentTime)                                       // inductor I2 from EDS         3, 0
+            #endif // CHANGE
+            - (basis[0][0] - basis[3][0]) / Re1                         // resistor Re1 from EDS        3, 0
+            + (il2.back() + dt * (basis[3][0] - basis[4][0]) / L2)      // inductor L2                  3, 4
         },
         {
-            -Cb * (basis[2][0] - basis[4][0] - ucb.back()) / dt
-            - (basis[2][0] - basis[4][0]) / Ru
-            - Id(basis[2][0], basis[4][0])
-            - C_NEW * (basis[0][0] - basis[4][0] - u_new.back()) / dt
-            - (il2.back() + dt * (basis[3][0] - basis[4][0]) / L2)
-            + C2 * (basis[4][0] - uc2.back()) / dt
+            - Cb * (basis[2][0] - basis[4][0] - ucb.back()) / dt    // capasitor Cb from diode      4, 2
+            - (basis[2][0] - basis[4][0]) / Ru                          // resistor Ru from diode       4, 2
+            - Id(basis[2][0], basis[4][0])                       // inductor Id from diode       4, 2
+            - C_NEW * (basis[0][0] - basis[4][0] - u_new.back()) / dt   // capasitor C_NEW              4, 0
+            - (il2.back() + dt * (basis[3][0] - basis[4][0]) / L2)      // inductor L2                  4, 3
+            + (C2 * (basis[4][0] - uc2.back()) / dt) - 0                // capasitor C2                 4, ground
         }
     };
 
     nodeAdmittance = {
         {
-            1 / R2 + C1 / dt + (C_NEW / dt) + 1 / Re1,
-            -C1 / dt,
+            #ifdef CHANGE
+            + NewI2DiffPhi0()   // added
+            #endif // CHANGE
+            + 1 / R2                                                  // resistor R2
+            + C1 / dt                                                   // capasitor C1
+            + (C_NEW / dt)                                              // capasitor C_NEW
+            + 1 / Re1,                                                  // resistor Re1
+            - C1 / dt,                                              // capasitor C1
             0,
-            -1 / Re1,
-            -(C_NEW / dt)
+            - 1 / Re1,                                              // resistor Re1
+            #ifdef CHANGE
+            + NewI2DiffPhi4()   // added
+            #endif // CHANGE
+            - (C_NEW / dt)                                          // capasitor C_NEW
         },
         {
-            -C1 / dt,
-            C1 / dt + 1 / Rb,
-            -1 / Rb,
+            - C1 / dt,                                              // capasitor C1
+            + C1 / dt                                               // capasitor C1
+            + 1 / Rb,                                                   // resistor Rb from diode
+            - 1 / Rb,                                               // resistor Rb from diode
             0,
             0
         },
-        {
+        {                                                           
+            0,                                                      
+            - 1 / Rb,                                               // resistor Rb from diode
+            1 / Rb                                                  // resistor Rb from diode
+            + Cb / dt                                                   // capasitor Cb from diode
+            + 1 / Ru                                                    // resistor Ru from diode
+            + DiffIdDiffp3(basis[2][0], basis[4][0]),            // inductor Id from diode
             0,
-            -1 / Rb,
-            1 / Rb + Cb / dt + 1 / Ru + DiffIdDiffp3(basis[2][0], basis[4][0]),
-            0,
-            -Cb / dt - 1 / Ru + DiffIdDiffp5(basis[2][0], basis[4][0])
+            - Cb / dt                                               // capasitor Cb from diode
+            - 1 / Ru                                                    // resistor Ru from diode
+            + DiffIdDiffp5(basis[2][0], basis[4][0])             // inductor Id from diode
         },
         {
-            -1 / Re1,
+            #ifdef CHANGE
+            - NewI2DiffPhi0()   // added
+            #endif // CHANGE
+            - 1 / Re1,                                              // resistor Re1
             0,
             0,
-            1 / Re1 + dt / L2,
-            -dt / L2
+            1 / Re1                                                 // resistor Re1
+            + dt / L2,                                                  // inductor L2
+            #ifdef CHANGE
+            - NewI2DiffPhi4()   // added
+            #endif // CHANGE
+            - dt / L2                                               // inductor L2
         },
         {
-            -(C_NEW / dt),
+            - (C_NEW / dt),                                         // capasitor C_NEW
             0,
-            -Cb / dt - 1 / Ru - DiffIdDiffp3(basis[2][0], basis[4][0]),
-            -dt / L2,
-            Cb / dt + 1 / Ru - DiffIdDiffp5(basis[2][0], basis[4][0]) + C2 / dt + dt / L2 + (C_NEW / dt)
+            - Cb / dt                                               // capasitor Cb from diode
+            - 1 / Ru                                                    // resistor Ru from diode
+            - DiffIdDiffp3(basis[2][0], basis[4][0]),            // inductor Id from diode
+            dt / L2,                                                // inductor L2
+            Cb / dt                                                 // capasitor Cb from diode
+            + 1 / Ru                                                    // resistor Ru from diode
+            - DiffIdDiffp5(basis[2][0], basis[4][0])             // inductor Id from diode
+            + C2 / dt                                                   // capasitor C2
+            + dt / L2                                                   // inductor L2
+            + (C_NEW / dt)                                              // capasitor C2
         }
     };
 }
@@ -260,7 +313,9 @@ bool PerformNewtonIteration(
     // Выполняем итерационный процесс
     while (std::fabs(FindAbsMax(delta).Value) > eps && n < MAX_STEPS) {
         Initialize(timeIteration, currentTime, dt, nodeAdmittance, residualVector, basis, uc1, uc2, ucb, il2, u_new);
+        // std::cout << nodeAdmittance << std::endl;
         delta = Gauss(nodeAdmittance, -residualVector);
+        // std::cout << nodeAdmittance << std::endl;
         basis += delta;
         ++n;
         ++currentIteration;
