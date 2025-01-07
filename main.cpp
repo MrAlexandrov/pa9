@@ -1,12 +1,12 @@
-#define YANDEX
+// #define YANDEX
 
 #if defined(YANDEX)
 #include <junk/mrralexandrov/test_directory/pa9/include/matrix.hpp>
 #include <junk/mrralexandrov/test_directory/pa9/include/plotter.hpp>
 // #include <junk/mrralexandrov/test_directory/pa9/include/interface.hpp>
 #else
-// #include "matrix.hpp"
-// #include "plotter.hpp"
+#include "matrix.hpp"
+#include "plotter.hpp"
 // #include "interface.hpp"
 #endif // YANDEX
 
@@ -357,7 +357,7 @@ bool PerformNewtonIteration(
             , u_new
             #endif // CHANGE_RESISTOR_TO_CAPACITOR
         );
-        // std::cout << nodeAdmittance << std::endl;
+        std::cout << nodeAdmittance << std::endl;
         delta = Gauss(nodeAdmittance, -residualVector);
         // std::cout << nodeAdmittance << std::endl;
         basis += delta;
