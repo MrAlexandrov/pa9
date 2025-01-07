@@ -80,7 +80,7 @@ struct TMaximum {
     int Col;
 };
 
-auto FindAbsMax(const TMatrix<>& matrix) {
+auto FindAbsMax(const TMatrix<>& matrix) -> TMaximum<long double> {
     int resutlRow = 0;
     int resutlCol = 0;
     long double maximum = matrix[0][0];
@@ -423,8 +423,8 @@ int main() {
         }
 
         if (timeIteration > 2) {  // оценка локальной точности
-            auto diff1 = (previousBasis[0] - previousBasis[1]) * (1 / (dt_prev1 * dt_prev1));
-            auto diff2 = (previousBasis[1] - previousBasis[2]) * (1 / (dt_prev1 * dt_prev2));
+            const auto diff1 = (previousBasis[0] - previousBasis[1]) * (1 / (dt_prev1 * dt_prev1));
+            const auto diff2 = (previousBasis[1] - previousBasis[2]) * (1 / (dt_prev1 * dt_prev2));
             long double d = 0.5 * dt * dt * std::fabs(FindAbsMax(diff1 - diff2).Value);
             if (d < EPS_MIN) {
                 currentTime += dt;
