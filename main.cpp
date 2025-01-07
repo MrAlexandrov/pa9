@@ -18,8 +18,8 @@
 #include <string>
 // Параметры элементов схемы
 
-#define CHANGE_RESISTOR_TO_CAPACITOR
-#define CHANGE_E1
+// #define CHANGE_RESISTOR_TO_CAPACITOR
+// #define CHANGE_E1
 
 using namespace NMatrix;
 
@@ -42,9 +42,8 @@ constexpr long double C_NEW = 1e-6;
 constexpr long double R21 = 1e+5;
 #endif // CHANGE_RESISTOR_TO_CAPACITOR
 
-long double I2(long double currentTime, long double p0, long double p4) {
-    // return (1e1 / Re1) * std::sin(2 * M_PI * currentTime / T);
-    return (p0 - p4 + 15) / Re1;
+long double I2(long double currentTime) {
+    return (1e1 / Re1) * std::sin(2 * M_PI * currentTime / T);
 }
 
 long double Id(long double p3, long double p5) {
@@ -358,7 +357,7 @@ bool PerformNewtonIteration(
             , u_new
             #endif // CHANGE_RESISTOR_TO_CAPACITOR
         );
-        std::cout << nodeAdmittance << std::endl;
+        // std::cout << nodeAdmittance << std::endl;
         delta = Gauss(nodeAdmittance, -residualVector);
         // std::cout << nodeAdmittance << std::endl;
         basis += delta;
