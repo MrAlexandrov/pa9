@@ -1,16 +1,14 @@
-// #ifdef WINDOWS
+#define YANDEX
 
-// #include "matrix.hpp"
-// #include "plotter.hpp"
-// #include "interface.hpp"
-
-// #else
-
+#if defined(YANDEX)
 #include <junk/mrralexandrov/test_directory/pa9/include/matrix.hpp>
 #include <junk/mrralexandrov/test_directory/pa9/include/plotter.hpp>
 // #include <junk/mrralexandrov/test_directory/pa9/include/interface.hpp>
-
-// #endif
+#else
+// #include "matrix.hpp"
+// #include "plotter.hpp"
+// #include "interface.hpp"
+#endif // YANDEX
 
 #include <iostream>
 #include <stdexcept>
@@ -20,6 +18,7 @@
 #include <string>
 // Параметры элементов схемы
 
+#define CHANGE_RESISTOR_TO_CAPACITOR
 #define CHANGE_E1
 
 using namespace NMatrix;
@@ -27,7 +26,6 @@ using namespace NMatrix;
 constexpr long double EPS = 1e-13;
 
 constexpr long double R2 = 1000.0;
-// constexpr long double R21 = 1e+5;
 constexpr long double C1 = 1e-6;
 constexpr long double C2 = 1e-6;
 constexpr long double L2 = 1e-3;
@@ -38,7 +36,11 @@ constexpr long double MFt = 0.026;
 constexpr long double It = 1e-12;
 constexpr long double Re1 = 1e-6;
 constexpr long double T = 1e-4;
+#ifdef CHANGE_RESISTOR_TO_CAPACITOR
 constexpr long double C_NEW = 1e-6;
+#else
+constexpr long double R21 = 1e+5;
+#endif // CHANGE_RESISTOR_TO_CAPACITOR
 
 long double I2(long double currentTime) {
     return (1e1 / Re1) * std::sin(2 * M_PI * currentTime / T);
@@ -158,23 +160,29 @@ TMatrix<> Gauss(
 
 // Функция заполнения матрицы проводимости и вектора токов
 void Initialize(
-    const int timeIteration,
-    const long double currentTime,
-    const long double dt,
-    TMatrix<>& nodeAdmittance,                              // матрица узловых проводимостей
-    TMatrix<>& residualVector,                              // вектор невязок
-    const TMatrix<>& basis,
-    const std::vector<long double>& uc1,
-    const std::vector<long double>& uc2,
-    const std::vector<long double>& ucb,
-    const std::vector<long double>& il2,
-    const std::vector<long double>& u_new
+    const int timeIteration
+    , const long double currentTime
+    , const long double dt
+    , TMatrix<>& nodeAdmittance                 // матрица узловых проводимостей
+    , TMatrix<>& residualVector                 // вектор невязок
+    , const TMatrix<>& basis
+    , const std::vector<long double>& uc1
+    , const std::vector<long double>& uc2
+    , const std::vector<long double>& ucb
+    , const std::vector<long double>& il2
+    #ifdef CHANGE_RESISTOR_TO_CAPACITOR
+    , const std::vector<long double>& u_new
+    #endif // CHANGE_RESISTOR_TO_CAPACITOR
 ) {
     residualVector = {
         {
             (basis[0][0] / R2) - 0                                  // resistor R2                  0, ground
             + C1 * (basis[0][0] - basis[1][0] - uc1.back()) / dt        // capasitor C1                 0, 1
+            #ifdef CHANGE_RESISTOR_TO_CAPACITOR
             + C_NEW * (basis[0][0] - basis[4][0] - u_new.back()) / dt   // capasitor C_NEW              0, 4
+            #else
+            + (basis[0][0] - basis[4][0]) / R21
+            #endif // CHANGE_RESISTOR_TO_CAPACITOR
             #ifdef CHANGE_E1
             + NewI2(basis[0][0], basis[4][0])
             #else
@@ -205,7 +213,11 @@ void Initialize(
             - Cb * (basis[2][0] - basis[4][0] - ucb.back()) / dt    // capasitor Cb from diode      4, 2
             - (basis[2][0] - basis[4][0]) / Ru                          // resistor Ru from diode       4, 2
             - Id(basis[2][0], basis[4][0])                       // inductor Id from diode       4, 2
+            #ifdef CHANGE_RESISTOR_TO_CAPACITOR
             - C_NEW * (basis[0][0] - basis[4][0] - u_new.back()) / dt   // capasitor C_NEW              4, 0
+            #else
+            - (basis[0][0] - basis[4][0]) / R21
+            #endif // CHANGE_RESISTOR_TO_CAPACITOR
             - (il2.back() + dt * (basis[3][0] - basis[4][0]) / L2)      // inductor L2                  4, 3
             + (C2 * (basis[4][0] - uc2.back()) / dt) - 0                // capasitor C2                 4, ground
         }
@@ -216,9 +228,13 @@ void Initialize(
             #ifdef CHANGE_E1
             + NewI2DiffPhi0()   // added
             #endif // CHANGE_E1
-            + 1 / R2                                                  // resistor R2
+            + 1 / R2                                                // resistor R2
             + C1 / dt                                                   // capasitor C1
+            #ifdef CHANGE_RESISTOR_TO_CAPACITOR
             + (C_NEW / dt)                                              // capasitor C_NEW
+            #else
+            + 1 / R21                                                   // resistor R21
+            #endif // CHANGE_RESISTOR_TO_CAPACITOR
             + 1 / Re1,                                                  // resistor Re1
             - C1 / dt,                                              // capasitor C1
             0,
@@ -226,6 +242,11 @@ void Initialize(
             #ifdef CHANGE_E1
             + NewI2DiffPhi4()   // added
             #endif // CHANGE_E1
+            #ifdef CHANGE_RESISTOR_TO_CAPACITOR
+            - (C_NEW / dt)                                              // capasitor C_NEW
+            #else
+            - 1 / R21                                               // resistor R21
+            #endif // CHANGE_RESISTOR_TO_CAPACITOR
         },
         {
             - C1 / dt,                                              // capasitor C1
@@ -262,7 +283,11 @@ void Initialize(
             - dt / L2                                               // inductor L2
         },
         {
+            #ifdef CHANGE_RESISTOR_TO_CAPACITOR
             - (C_NEW / dt),                                         // capasitor C_NEW
+            #else
+            - 1 / R21,                                                  // resistor R21
+            #endif // CHANGE_RESISTOR_TO_CAPACITOR
             0,
             - Cb / dt                                               // capasitor Cb from diode
             - 1 / Ru                                                    // resistor Ru from diode
@@ -273,7 +298,11 @@ void Initialize(
             - DiffIdDiffp5(basis[2][0], basis[4][0])             // inductor Id from diode
             + C2 / dt                                                   // capasitor C2
             + dt / L2                                                   // inductor L2
+            #ifdef CHANGE_RESISTOR_TO_CAPACITOR
             + (C_NEW / dt)                                              // capasitor C2
+            #else
+            + (1 / R21)                                                  // capasitor C2
+            #endif // CHANGE_RESISTOR_TO_CAPACITOR
         }
     };
 }
@@ -295,7 +324,9 @@ bool PerformNewtonIteration(
     const std::vector<long double>& uc2,
     const std::vector<long double>& ucb,
     const std::vector<long double>& il2,
+    #ifdef CHANGE_RESISTOR_TO_CAPACITOR
     const std::vector<long double>& u_new,
+    #endif // CHANGE_RESISTOR_TO_CAPACITOR
     int& currentIteration
 ) {
     constexpr int MAX_STEPS = 10;   // максимальное число итераций Ньютона
@@ -311,7 +342,21 @@ bool PerformNewtonIteration(
 
     // Выполняем итерационный процесс
     while (std::fabs(FindAbsMax(delta).Value) > eps && n < MAX_STEPS) {
-        Initialize(timeIteration, currentTime, dt, nodeAdmittance, residualVector, basis, uc1, uc2, ucb, il2, u_new);
+        Initialize(
+            timeIteration
+            , currentTime
+            , dt
+            , nodeAdmittance
+            , residualVector
+            , basis
+            , uc1
+            , uc2
+            , ucb
+            , il2
+            #ifdef CHANGE_RESISTOR_TO_CAPACITOR
+            , u_new
+            #endif // CHANGE_RESISTOR_TO_CAPACITOR
+        );
         // std::cout << nodeAdmittance << std::endl;
         delta = Gauss(nodeAdmittance, -residualVector);
         // std::cout << nodeAdmittance << std::endl;
@@ -347,14 +392,29 @@ int main() {
     std::vector<long double> uc2 = {0};
     std::vector<long double> ucb = {0};
     std::vector<long double> il2 = {0};
+    #ifdef CHANGE_RESISTOR_TO_CAPACITOR
     std::vector<long double> u_new = {0};
+    #endif // CHANGE_RESISTOR_TO_CAPACITOR
     std::vector<std::vector<long double>> phi(5);
     int timeIteration = 1;
     int currentIteration = 1;
     while (dt >= DT_MIN && currentTime <= TIME_MAX) {
         // int n = 0;
         basis = ((previousBasis[0] - previousBasis[1]) * (dt_prev1 + dt) / dt) + previousBasis[1]; // начальные приближения
-        bool success = PerformNewtonIteration(timeIteration, currentTime, dt, basis, uc1, uc2, ucb, il2, u_new, currentIteration);
+        bool success = PerformNewtonIteration(
+            timeIteration
+            , currentTime
+            , dt
+            , basis
+            , uc1
+            , uc2
+            , ucb
+            , il2
+            #ifdef CHANGE_RESISTOR_TO_CAPACITOR
+            , u_new
+            #endif // CHANGE_RESISTOR_TO_CAPACITOR
+            , currentIteration
+        );
 
         if (!success) {
             dt /= 2;
@@ -392,7 +452,9 @@ int main() {
         uc2.push_back(basis[4][0]);
         ucb.push_back(basis[2][0] - basis[4][0]);
         il2.push_back(il2.back() + dt * (basis[3][0] - basis[4][0]) / L2);
+        #ifdef CHANGE_RESISTOR_TO_CAPACITOR
         u_new.push_back(basis[0][0] - basis[4][0]);
+        #endif // CHANGE_RESISTOR_TO_CAPACITOR
         ++timeIteration;
     }
     if (dt < DT_MIN) {
