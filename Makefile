@@ -1,14 +1,8 @@
 PROJECT_NAME = main
 
-CXXFLAGS += -DDEBUG
-
-INPUT_FILE = input.txt
-OUTPUT_FILE = output.txt
-
 NPROCS ?= $(shell nproc)
 
 BUILD_DIR = build
-RESULTS_DIR = results
 
 all: build test run
 
@@ -24,7 +18,7 @@ test: build
 
 run: build
 	@echo "==> Running ${PROJECT_NAME} with arguments: $(ARGS)"
-	@cd ${BUILD_DIR} && ./${PROJECT_NAME} $(ARGS)
+	@${BUILD_DIR}/${PROJECT_NAME} $(ARGS)
 
 clean:
 	@echo "==> Cleaning up..."

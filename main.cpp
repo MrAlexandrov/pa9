@@ -36,15 +36,11 @@ constexpr long double MFt = 0.026;
 constexpr long double It = 1e-12;
 constexpr long double Re1 = 1e-6;
 constexpr long double T = 1e-4;
-#ifdef CHANGE_RESISTOR_TO_CAPACITOR
+#if defined(CHANGE_RESISTOR_TO_CAPACITOR)
 constexpr long double C_NEW = 1e-6;
 #else
 constexpr long double R21 = 1e+5;
 #endif // CHANGE_RESISTOR_TO_CAPACITOR
-
-long double I2(long double currentTime) {
-    return (1e1 / Re1) * std::sin(2 * M_PI * currentTime / T);
-}
 
 long double Id(long double p3, long double p5) {
     return It * (std::exp((p3 - p5) / MFt) - 1);
@@ -58,7 +54,7 @@ long double DiffIdDiffp5(long double p3, long double p5) {
     return -It * std::exp((p3 - p5) / MFt) / MFt;
 }
 
-#ifdef CHANGE_E1
+#if defined(CHANGE_E1)
 long double NewI2(long double phi0, long double phi4) {
     return (15 + (phi0 - phi4)) / Re1;
 }
@@ -69,6 +65,10 @@ long double NewI2DiffPhi0() {
 
 long double NewI2DiffPhi4() {
     return - 1 / Re1;
+}
+#else
+long double I2(long double currentTime) {
+    return (1e1 / Re1) * std::sin(2 * M_PI * currentTime / T);
 }
 #endif // CHANGE_E1
 
@@ -170,7 +170,7 @@ void Initialize(
     , const std::vector<long double>& uc2
     , const std::vector<long double>& ucb
     , const std::vector<long double>& il2
-    #ifdef CHANGE_RESISTOR_TO_CAPACITOR
+    #if defined(CHANGE_RESISTOR_TO_CAPACITOR)
     , const std::vector<long double>& u_new
     #endif // CHANGE_RESISTOR_TO_CAPACITOR
 ) {
@@ -178,12 +178,12 @@ void Initialize(
         {
             (basis[0][0] / R2) - 0                                  // resistor R2                  0, ground
             + C1 * (basis[0][0] - basis[1][0] - uc1.back()) / dt        // capasitor C1                 0, 1
-            #ifdef CHANGE_RESISTOR_TO_CAPACITOR
+            #if defined(CHANGE_RESISTOR_TO_CAPACITOR)
             + C_NEW * (basis[0][0] - basis[4][0] - u_new.back()) / dt   // capasitor C_NEW              0, 4
             #else
             + (basis[0][0] - basis[4][0]) / R21
             #endif // CHANGE_RESISTOR_TO_CAPACITOR
-            #ifdef CHANGE_E1
+            #if defined(CHANGE_E1)
             + NewI2(basis[0][0], basis[4][0])
             #else
             + I2(currentTime)                                           // inductor I2 from EDS         0, 3
@@ -201,7 +201,7 @@ void Initialize(
             + Id(basis[2][0], basis[4][0])                       // inductor Id from diode       2, 4
         },
         {
-            #ifdef CHANGE_E1
+            #if defined(CHANGE_E1)
             - NewI2(basis[0][0], basis[4][0])
             #else
             - I2(currentTime)                                           // inductor I2 from EDS         3, 0
@@ -213,7 +213,7 @@ void Initialize(
             - Cb * (basis[2][0] - basis[4][0] - ucb.back()) / dt    // capasitor Cb from diode      4, 2
             - (basis[2][0] - basis[4][0]) / Ru                          // resistor Ru from diode       4, 2
             - Id(basis[2][0], basis[4][0])                       // inductor Id from diode       4, 2
-            #ifdef CHANGE_RESISTOR_TO_CAPACITOR
+            #if defined(CHANGE_RESISTOR_TO_CAPACITOR)
             - C_NEW * (basis[0][0] - basis[4][0] - u_new.back()) / dt   // capasitor C_NEW              4, 0
             #else
             - (basis[0][0] - basis[4][0]) / R21
@@ -225,12 +225,12 @@ void Initialize(
 
     nodeAdmittance = {
         {
-            #ifdef CHANGE_E1
+            #if defined(CHANGE_E1)
             + NewI2DiffPhi0()   // added
             #endif // CHANGE_E1
             + 1 / R2                                                    // resistor R2
             + C1 / dt                                                   // capasitor C1
-            #ifdef CHANGE_RESISTOR_TO_CAPACITOR
+            #if defined(CHANGE_RESISTOR_TO_CAPACITOR)
             + (C_NEW / dt)                                              // capasitor C_NEW
             #else
             + 1 / R21                                                   // resistor R21
@@ -239,10 +239,10 @@ void Initialize(
             - C1 / dt,                                              // capasitor C1
             0,
             - 1 / Re1,                                              // resistor Re1
-            #ifdef CHANGE_E1
+            #if defined(CHANGE_E1)
             + NewI2DiffPhi4()   // added
             #endif // CHANGE_E1
-            #ifdef CHANGE_RESISTOR_TO_CAPACITOR
+            #if defined(CHANGE_RESISTOR_TO_CAPACITOR)
             - (C_NEW / dt)                                              // capasitor C_NEW
             #else
             - 1 / R21                                                   // resistor R21
@@ -269,7 +269,7 @@ void Initialize(
             + DiffIdDiffp5(basis[2][0], basis[4][0])             // inductor Id from diode
         },
         {
-            #ifdef CHANGE_E1
+            #if defined(CHANGE_E1)
             - NewI2DiffPhi0()   // added
             #endif // CHANGE_E1
             - 1 / Re1,                                                  // resistor Re1
@@ -277,13 +277,13 @@ void Initialize(
             0,
             1 / Re1                                                 // resistor Re1
             + dt / L2,                                                  // inductor L2
-            #ifdef CHANGE_E1
+            #if defined(CHANGE_E1)
             - NewI2DiffPhi4()   // added
             #endif // CHANGE_E1
             - dt / L2                                                   // inductor L2
         },
         {
-            #ifdef CHANGE_RESISTOR_TO_CAPACITOR
+            #if defined(CHANGE_RESISTOR_TO_CAPACITOR)
             - (C_NEW / dt),                                         // capasitor C_NEW
             #else
             - 1 / R21,                                                  // resistor R21
@@ -298,7 +298,7 @@ void Initialize(
             - DiffIdDiffp5(basis[2][0], basis[4][0])             // inductor Id from diode
             + C2 / dt                                                   // capasitor C2
             + dt / L2                                                   // inductor L2
-            #ifdef CHANGE_RESISTOR_TO_CAPACITOR
+            #if defined(CHANGE_RESISTOR_TO_CAPACITOR)
             + (C_NEW / dt)                                              // capasitor C2
             #else
             + (1 / R21)                                                 // capasitor C2
@@ -324,7 +324,7 @@ bool PerformNewtonIteration(
     , const std::vector<long double>& uc2
     , const std::vector<long double>& ucb
     , const std::vector<long double>& il2
-    #ifdef CHANGE_RESISTOR_TO_CAPACITOR
+    #if defined(CHANGE_RESISTOR_TO_CAPACITOR)
     , const std::vector<long double>& u_new
     #endif // CHANGE_RESISTOR_TO_CAPACITOR
     , int& currentIteration
@@ -353,7 +353,7 @@ bool PerformNewtonIteration(
             , uc2
             , ucb
             , il2
-            #ifdef CHANGE_RESISTOR_TO_CAPACITOR
+            #if defined(CHANGE_RESISTOR_TO_CAPACITOR)
             , u_new
             #endif // CHANGE_RESISTOR_TO_CAPACITOR
         );
@@ -373,7 +373,7 @@ bool PerformNewtonIteration(
     return true;
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     constexpr long double DT_MIN = 1e-12;                               // минимальный шаг интегрирования по времени
     constexpr long double EPS_MIN = 1e-6;                               // нижняя граница для оценки локальной точности
     constexpr long double EPS_MAX = 5e-2;                               // верхняя граница для оценки локальной точности
@@ -392,7 +392,7 @@ int main() {
     std::vector<long double> uc2 = {0};
     std::vector<long double> ucb = {0};
     std::vector<long double> il2 = {0};
-    #ifdef CHANGE_RESISTOR_TO_CAPACITOR
+    #if defined(CHANGE_RESISTOR_TO_CAPACITOR)
     std::vector<long double> u_new = {0};
     #endif // CHANGE_RESISTOR_TO_CAPACITOR
     std::vector<std::vector<long double>> phi(5);
@@ -410,7 +410,7 @@ int main() {
             , uc2
             , ucb
             , il2
-            #ifdef CHANGE_RESISTOR_TO_CAPACITOR
+            #if defined(CHANGE_RESISTOR_TO_CAPACITOR)
             , u_new
             #endif // CHANGE_RESISTOR_TO_CAPACITOR
             , currentIteration
@@ -454,7 +454,7 @@ int main() {
         uc2.push_back(basis[4][0]);
         ucb.push_back(basis[2][0] - basis[4][0]);
         il2.push_back(il2.back() + dt * (basis[3][0] - basis[4][0]) / L2);
-        #ifdef CHANGE_RESISTOR_TO_CAPACITOR
+        #if defined(CHANGE_RESISTOR_TO_CAPACITOR)
         u_new.push_back(basis[0][0] - basis[4][0]);
         #endif // CHANGE_RESISTOR_TO_CAPACITOR
         ++timeIteration;
