@@ -205,7 +205,7 @@ void Initialize(
             #ifdef CHANGE_E1
             - NewI2(basis[0][0], basis[4][0])
             #else
-            - I2(currentTime)                                       // inductor I2 from EDS         3, 0
+            - I2(currentTime)                                           // inductor I2 from EDS         3, 0
             #endif // CHANGE_E1
             - (basis[0][0] - basis[3][0]) / Re1                         // resistor Re1 from EDS        3, 0
             + (il2.back() + dt * (basis[3][0] - basis[4][0]) / L2)      // inductor L2                  3, 4
@@ -229,7 +229,7 @@ void Initialize(
             #ifdef CHANGE_E1
             + NewI2DiffPhi0()   // added
             #endif // CHANGE_E1
-            + 1 / R2                                                // resistor R2
+            + 1 / R2                                                    // resistor R2
             + C1 / dt                                                   // capasitor C1
             #ifdef CHANGE_RESISTOR_TO_CAPACITOR
             + (C_NEW / dt)                                              // capasitor C_NEW
@@ -246,7 +246,7 @@ void Initialize(
             #ifdef CHANGE_RESISTOR_TO_CAPACITOR
             - (C_NEW / dt)                                              // capasitor C_NEW
             #else
-            - 1 / R21                                               // resistor R21
+            - 1 / R21                                                   // resistor R21
             #endif // CHANGE_RESISTOR_TO_CAPACITOR
         },
         {
@@ -273,7 +273,7 @@ void Initialize(
             #ifdef CHANGE_E1
             - NewI2DiffPhi0()   // added
             #endif // CHANGE_E1
-            - 1 / Re1,                                              // resistor Re1
+            - 1 / Re1,                                                  // resistor Re1
             0,
             0,
             1 / Re1                                                 // resistor Re1
@@ -281,7 +281,7 @@ void Initialize(
             #ifdef CHANGE_E1
             - NewI2DiffPhi4()   // added
             #endif // CHANGE_E1
-            - dt / L2                                               // inductor L2
+            - dt / L2                                                   // inductor L2
         },
         {
             #ifdef CHANGE_RESISTOR_TO_CAPACITOR
@@ -302,7 +302,7 @@ void Initialize(
             #ifdef CHANGE_RESISTOR_TO_CAPACITOR
             + (C_NEW / dt)                                              // capasitor C2
             #else
-            + (1 / R21)                                                  // capasitor C2
+            + (1 / R21)                                                 // capasitor C2
             #endif // CHANGE_RESISTOR_TO_CAPACITOR
         }
     };
@@ -380,7 +380,7 @@ int main() {
     constexpr long double EPS_MAX = 5e-2;                               // верхняя граница для оценки локальной точности
     constexpr long double TIME_MAX = 1e-3;                              // время расчёта
     long double currentTime = 0;                                        // время
-    long double dt = 1e-8;                                            // шаг интегрирования по времени
+    long double dt = 1e-8;                                              // шаг интегрирования по времени
     long double dt_prev1 = dt;
     long double dt_prev2 = dt;                                          // предыдущие шаги интегрирования по времени
     TMatrix<> basis(5, 1);                                   // вектор базиса метода (узловые потенциалы)
@@ -423,7 +423,9 @@ int main() {
         }
 
         if (timeIteration > 2) {  // оценка локальной точности
-            long double d = 0.5 * dt * dt * std::fabs(FindAbsMax(((previousBasis[0] - previousBasis[1]) * (1 / (dt_prev1 * dt_prev1)) - (previousBasis[1] - previousBasis[2]) * (1 / (dt_prev1 * dt_prev2)))).Value);
+            auto diff1 = (previousBasis[0] - previousBasis[1]) * (1 / (dt_prev1 * dt_prev1));
+            auto diff2 = (previousBasis[1] - previousBasis[2]) * (1 / (dt_prev1 * dt_prev2));
+            long double d = 0.5 * dt * dt * std::fabs(FindAbsMax(diff1 - diff2).Value);
             if (d < EPS_MIN) {
                 currentTime += dt;
                 dt_prev2 = dt_prev1;
@@ -466,32 +468,11 @@ int main() {
 
     std::vector<std::string> colors = {"red", "orange", "green", "blue", "violet"};
 
-    {
-        for (int i = 0; i < 5; ++i) {
-            std::string title = "phi_" + std::to_string(i + 1);
-            NPlotter::TPlotter graphic(title);
-            graphic.SetXValues(time);
-            graphic.AddGraphic(title, colors[i], phi[i]);
-        }
+    for (int i = 0; i < 5; ++i) {
+        std::string title = "phi_" + std::to_string(i + 1);
+        NPlotter::TPlotter graphic(title);
+        graphic.SetXValues(time);
+        graphic.AddGraphic(title, colors[i], phi[i]);
     }
-    // const int derivativeSize = time.size() - 1;
-    // std::vector<long double> derivativeTime;
-    // std::vector<std::vector<long double>> derivativePhi(5);
-
-    // for (int i = 0; i < derivativeSize; ++i) {
-    //     derivativeTime.emplace_back(time[i] + (time[i + 1] - time[i]) / 2);
-    //     for (int j = 0; j < 5; ++j) {
-    //         derivativePhi[j].emplace_back((phi[j][i + 1] - phi[j][i]) / (time[i + 1] - time[i]));
-    //     }
-    // }
-    // {
-    //     int i = 0;
-    //     NPlotter::TPlotter graphic("derivative" + std::to_string(i + 1));
-    //     for (int i = 0; i < 5; ++i) {
-    //         std::string title = "derivative_phi_" + std::to_string(i + 1);
-    //         graphic.SetXValues(derivativeTime);
-    //         graphic.AddGraphic(title, colors[i], derivativePhi[i]);
-    //     }
-    // }
     return 0;
 }
