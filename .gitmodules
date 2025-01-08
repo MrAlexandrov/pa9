@@ -1,3 +1,4 @@
 [submodule "third_party/matrix"]
 	path = third_party/matrix
 	url = https://github.com/MrAlexandrov/matrix_class.git
+    branch = master

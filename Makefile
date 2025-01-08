@@ -28,4 +28,7 @@ install:
 	sudo apt-get update
 	sudo apt-get install -y cmake clang libgtest-dev
 
-.PHONY: all build test run clean install
+update:
+	git submodule update --remote --merge
+
+.PHONY: all build test run clean install update
