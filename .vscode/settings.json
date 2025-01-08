@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "iosfwd": "cpp"
+    },
+    "cmake.sourceDirectory": "${workspaceFolder}",
+    "cmake.buildDirectory": "${workspaceFolder}/build",
+    "cmake.configureOnOpen": true,
+    "cmake.buildBeforeRun": true,
+    "cmake.generator": "Ninja"
+}
