@@ -18,8 +18,8 @@
 #include <string>
 // Параметры элементов схемы
 
-// #define CHANGE_RESISTOR_TO_CAPACITOR
-// #define CHANGE_E1
+#define CHANGE_RESISTOR_TO_CAPACITOR
+#define CHANGE_E1
 
 using namespace NMatrix;
 
@@ -469,9 +469,9 @@ int main(int argc, char* argv[]) {
 
     for (int i = 0; i < 5; ++i) {
         std::string title = "phi_" + std::to_string(i + 1);
-        NPlotter::TPlotter graphic(title);
+        NPlotter::TPlotter<decltype(time)::value_type> graphic(title);
         graphic.SetXValues(time);
-        graphic.AddGraphic(title, colors[i], phi[i]);
+        graphic.EmplaceGraphic<std::decay_t<decltype(phi[i])>::value_type>(title, phi[i], colors[i]);
     }
     return 0;
 }
